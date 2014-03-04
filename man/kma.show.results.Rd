@@ -5,17 +5,17 @@ Auxiliary function plotting results of \link{kma} function.
 }
 
 \description{
-kma.show.results graphically shows the output results of \link{kma} function or one of the outuput results of \link{kma.compare} function.% 
+kma.show.results graphically shows the output results of \link{kma} function or one of the outuput results of \link{kma.compare}.% 
 
-Four or six plots are generated (depending on the presence of \code{y0} and/or \code{y1} among the inputs):%
+The function generates the following plots:%
 
-- Plot of original functions with center (if \code{y0} is given as input in \link{kma}/\link{kma.compare} function).%
+- \emph{d} plots of original functions (one for each of the \emph{d} dimensions of the input functions -for unidimensional functions \emph{d} is \code{1}-) with center (if \code{y0} is given as input in \link{kma}/\link{kma.compare} function).%
 
-- Plot of aligned functions with centers (if \code{y0} is given as input in \link{kma}/\link{kma.compare} function).% 
+- \emph{d} plots of aligned functions with centers (if \code{y0} is given as input in \link{kma}/\link{kma.compare} function).% 
 
-- Plot of original function first derivatives with center (if \code{y1} is given as input and the chosen \code{similarity.method} concerns function first derivatives).% 
+- \emph{d} plots of original function first derivatives with center (if \code{y1} is given as input and the chosen \code{similarity.method} concerns function first derivatives).% 
 
-- Plot of aligned function first derivatives with centers (if \code{y1} is given as input and the chosen \code{similarity.method} concerns function first derivatives).%
+- \emph{d} plot of aligned function first derivatives with centers (if \code{y1} is given as input and the chosen \code{similarity.method} concerns function first derivatives).%
 
 - Plot of warping functions.%
 
@@ -24,12 +24,17 @@ Four or six plots are generated (depending on the presence of \code{y0} and/or \
 }
 
 \usage{
-kma.show.results(Result)
+kma.show.results(Result, lwd.functions = 1, lwd.centers = 3)
 }
 
 \arguments{
   \item{Result}{list:
-  output of \link{kma} function or one of the outputs of \link{kma.compare} functions.
+  output of \link{kma} function or one of the outputs of \link{kma.compare} functions.}
+  \item{lwd.functions}{integer:
+  the desired line width of the curves. Default value is 1.
+  }
+  \item{lwd.centers}{integer:
+  the desired line width of the centers. Default value is 3.
   }
 }
 

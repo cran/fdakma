@@ -3,7 +3,7 @@
 \title{Similarity/dissimilarity index between two functions}
 
 \description{
-kma.similarity computes a similarity/dissimilarity measure between two functions \eqn{f} and \eqn{g}. Users can choose among different types of measures.
+kma.similarity computes a similarity/dissimilarity measure between two functions \eqn{f} and \eqn{g} (multidimensional or unidimensional functions). Users can choose among different types of measures.
 }
 
 \usage{
@@ -13,17 +13,17 @@ x.g = NULL, y0.g = NULL, y1.g = NULL, similarity.method, unif.grid = TRUE)
 
 \arguments{
 
-  \item{x.f}{vector: abscissa grid where function \eqn{f}  and his first derivatives \eqn{f'} is evaluated. \code{x.f} must always be provided.}
+  \item{x.f}{vector \emph{length.f}: abscissa grid where function \eqn{f}  and his first derivatives \eqn{f'} is evaluated. \emph{length.f}: number of abscissa values where \eqn{f} is evaluated. \code{x.f} must always be provided.}
   
-  \item{y0.f}{vector: evaluations of function \eqn{f} on the abscissa grid \code{x.f}. Default value of \code{y0.f} is \code{NULL}. The vector \code{y0.f} must be provided if the chosen \code{similarity.method} concerns original functions.}
+  \item{y0.f}{vector \emph{length.f} or matrix \emph{length.f} X \emph{d}: evaluations of function \eqn{f} on the abscissa grid \code{x.f}.\emph{length.f}: number of abscissa values where \eqn{f} is evaluated. \emph{d}: (only if \eqn{f} and \eqn{g} are multidimensional) number of function's components, i.e. \eqn{f} is a \emph{d}-dimensional curve. Default value of \code{y0.f} is \code{NULL}. The vector \code{y0.f} must be provided if the chosen \code{similarity.method} concerns original functions.}
   
-  \item{y1.f}{vector: evaluations of \eqn{f} first derivative, i.e., \eqn{f'}, on the abscissa grid \code{x.f}. Default value of \code{y1.f} is \code{NULL}. The vector \code{y1.f} must be provided if the chosen \code{similarity.method} concerns function first derivatives.}
+  \item{y1.f}{vector \emph{length.f} or matrix \emph{length.f} X \emph{d}: evaluations of \eqn{f} first derivative, i.e., \eqn{f'}, on the abscissa grid \code{x.f}. Default value of \code{y1.f} is \code{NULL}. The vector \code{y1.f} must be provided if the chosen \code{similarity.method} concerns function first derivatives.}
   
-  \item{x.g}{vector: abscissa grid where function \eqn{g}  and his first derivatives \eqn{g'} is evaluated. \code{x.g} must always be provided.}
+  \item{x.g}{vector \emph{length.g}: abscissa grid where function \eqn{g}  and his first derivatives \eqn{g'} is evaluated. \emph{length.g}: number of abscissa values where \eqn{g} is evaluated. \code{x.g} must always be provided.}
   
-  \item{y0.g}{vector: evaluations of function \eqn{g} on the abscissa grid \code{x.g}. Default value of \code{y0.g} is \code{NULL}. The vector \code{y0.g} must be provided if the chosen \code{similarity.method} concerns original functions.}
+  \item{y0.g}{vector \emph{length.g} or matrix \emph{length.g} X \emph{d}: evaluations of function \eqn{g} on the abscissa grid \code{x.g}.\emph{length.g}: number of abscissa values where \eqn{g} is evaluated. \emph{d}: (only if \eqn{f} and \eqn{g} are multidimensional) number of function's components, i.e. \eqn{g} is a \emph{d}-dimensional curve. Default value of \code{y0.g} is \code{NULL}. The vector \code{y0.g} must be provided if the chosen \code{similarity.method} concerns original functions.}
   
-  \item{y1.g}{vector: evaluations of \eqn{g} first derivative, i.e., \eqn{g'}, on the abscissa grid \code{x.g}. Default value is of \code{y1.g} \code{NULL}. The vector \code{y1.g} must be provided if the chosen \code{similarity.method} concerns function first derivatives.}
+  \item{y1.g}{vector \emph{length.g} or matrix \emph{length.g} X \emph{d}: evaluations of \eqn{g} first derivative, i.e., \eqn{g'}, on the abscissa grid \code{x.g}. Default value is of \code{y1.g} \code{NULL}. The vector \code{y1.g} must be provided if the chosen \code{similarity.method} concerns function first derivatives.}
   
   \item{similarity.method}{character: similarity/dissimilarity between \eqn{f} and \eqn{g}. Possible choices are: \code{'d0.pearson'}, \code{'d1.pearson'}, \code{'d0.L2'}, \code{'d1.L2'},%
 \code{'d0.L2.centered'}, \code{'d1.L2.centered'}. Default value is \code{'d1.pearson'}. See details.}

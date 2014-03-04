@@ -10,14 +10,14 @@ To run kma function with different numbers of clusters and/or different alignmen
 kma(x, y0 = NULL, y1 = NULL, n.clust = 1, warping.method = "affine",%
 similarity.method = "d1.pearson", center.method = "k-means", seeds = NULL,%
 optim.method = "L-BFGS-B", span = 0.15, t.max = 0.1, m.max = 0.1, n.out = NULL,% 
-tol = 0.01, fence = TRUE, iter.max = 100, show.iter = 0)
+tol = 0.01, fence = TRUE, iter.max = 100, show.iter = 0, nstart=1, return.all=FALSE)
 }
 
 \arguments{
   \item{x}{matrix \emph{n.func} X \emph{grid.size} or vector \emph{grid.size}: 
   the abscissa values where each function is evaluated. \emph{n.func}: number of functions in the dataset. \emph{grid.size}: maximal number of abscissa values where each function is evaluated. The abscissa points may be unevenly spaced and they may differ from function to function. \code{x} can also be a vector of length \emph{grid.size}. In this case, \code{x} will be used as abscissa grid for all functions.}
 
-  \item{y0}{matrix \emph{n.func} X \emph{grid.size} or array \emph{n.func} X \emph{grid.size} X \emph{d}: evaluations of the set of original functions on the abscissa grid \code{x}. \emph{n.func}: number of functions in the dataset. \emph{grid.size}: maximal number of abscissa values where each function is evaluated. \emph{d}: (only if the sample is multidimensional) number of function components, i.e. each function is a \emph{d}-dimensional curve. Default value of \code{y0} is \code{NULL}. The parameter \code{y0} must be provided if the chosen \code{similarity.method} concerns original functions.}
+  \item{y0}{matrix \emph{n.func} X \emph{grid.size} or array \emph{n.func} X \emph{grid.size} X \emph{d}: evaluations of the set of original functions on the abscissa grid \code{x}. \emph{n.func}: number of functions in the dataset. \emph{grid.size}: maximal number of abscissa values where each function is evaluated. \emph{d}: (only if the sample is multidimensional) number of function's components, i.e. each function is a \emph{d}-dimensional curve. Default value of \code{y0} is \code{NULL}. The parameter \code{y0} must be provided if the chosen \code{similarity.method} concerns original functions.}
 
   \item{y1}{matrix \emph{n.func} X \emph{grid.size} or array \emph{n.func} X \emph{grid.size} X \emph{d}: evaluations of the set of original functions first derivatives on the abscissa grid \code{x}. Default value of \code{y1} is \code{NULL}. The parameter \code{y1} must be provided if the chosen \code{similarity.method} concerns original function first derivatives.}
 
@@ -29,7 +29,7 @@ tol = 0.01, fence = TRUE, iter.max = 100, show.iter = 0)
 
   \item{center.method}{character: type of clustering method to be used. Possible choices are: \code{'k-means'} and \code{'k-medoids'}. Default value is \code{'k-means'}.}
 
-  \item{seeds}{scalar or vector: indexes of the functions to be used as initial centers. If \code{seeds=NULL} centers are randomly chosen among the \emph{n.func} original functions. Default value of \code{seeds} is \code{NULL}.}
+\item{seeds}{vector \emph{n.clust} or matrix \emph{nstart} X \emph{n.clust}: indexes of the functions to be used as initial centers. If it is a matrix, each row contains the indexes of the initial centers of one of the \code{nstart} initializations; if not all the values of \code{seeds} are provided, the ones not introduced are randomly chosen among the \emph{n.func} original functions. If \code{seeds=NULL} all the centers are randomly chosen. Default value of \code{seeds} is \code{NULL}.}
 
   \item{optim.method}{character: optimization method chosen to find the best warping functions at each iteration. Possible choices are: \code{'L-BFGS-B'} and \code{'SANN'}. See \link{optim} function for details. Default method is \code{'L-BFGS-B'}.
 }
@@ -49,7 +49,10 @@ tol = 0.01, fence = TRUE, iter.max = 100, show.iter = 0)
   \item{iter.max}{scalar: maximum number of iterations in the k-mean alignment cycle. Default value is \code{100}.}
   
   \item{show.iter}{boolean: if \code{show.iter=TRUE} kma shows the current iteration of the algorithm. Default value is \code{FALSE}.}
+  
+ \item{nstart}{scalar: number of initializations with different seeds. Default value is \code{1}}
  
+ \item{return.all}{boolean: if \code{return.all=TRUE} the results of all the \code{nstart} initailizations are returned; the output is a list of length \code{nstart}. If \code{return.all=FALSE} only the best result  is provided (the one with higher mean similarity if \code{similarity.method} is \code{'d0.pearson'} or \code{'d1.pearson'}, or the one with lower similarity if \code{similarity.method} is \code{'d0.L2'}, \code{'d1.L2'},  \code{'d0.L2.centered'} or \code{'d1.L2.centered'}). Default value is \code{FALSE}}
 }
 
 
@@ -74,9 +77,9 @@ The function output is a list containing the following elements:
 
 \item{x.center.orig}{vector \emph{n.out}: abscissa of the original center.}
 
-\item{y0.center.orig}{matrix \emph{1} X \emph{n.out}: the unique row contains the evaluations of the original function center. If \code{warping.method='k-means'} there are two scenarios: if \code{similarity.method='d0.pearson'} or \code{'d0.L2'} or \code{d0.L2.centered} the original function center is computed via \link{loess} procedure applied to original data; if \code{similarity.method='d1.pearson'} or \code{'d1.L2'} or \code{d1.L2.centered} it is computed by integration of first derivatives center \code{y1.center.orig} (the integration constant is computed minimizing the sum of the weighed L2 distances between the center and the original functions). If \code{warping.method='k-medoids'} the original function center is the medoid of original functions.}
+\item{y0.center.orig}{for unidimensional functions: matrix \emph{1} X \emph{n.out}: the unique row contains the evaluations of the original function center. If \code{warping.method='k-means'} there are two scenarios: if \code{similarity.method='d0.pearson'} or \code{'d0.L2'} or \code{d0.L2.centered} the original function center is computed via \link{loess} procedure applied to original data; if \code{similarity.method='d1.pearson'} or \code{'d1.L2'} or \code{d1.L2.centered} it is computed by integration of first derivatives center \code{y1.center.orig} (the integration constant is computed minimizing the sum of the weighed L2 distances between the center and the original functions). If \code{warping.method='k-medoids'} the original function center is the medoid of original functions. \cr for multidimesional functions: list of one element containing a matrix \emph{d} X \emph{n.out}: each row contains the evaluations of the original function center along a dimension. \emph{d}: number of function's components}
 
-\item{y1.center.orig}{matrix \emph{1} X \emph{n.out}: the unique row contains the evaluations of the original function first derivatives center. If \code{warping.method='k-means'} the original center is computed via \link{loess} procedure applied to original function first derivatives. If \code{warping.method='k-medoids'} the original center is the medoid of original functions.}
+\item{y1.center.orig}{for unidimensional functions: matrix \emph{1} X \emph{n.out}: the unique row contains the evaluations of the original function first derivatives center. If \code{warping.method='k-means'} the original center is computed via \link{loess} procedure applied to original function first derivatives. If \code{warping.method='k-medoids'} the original center is the medoid of original functions. \cr for multidimesional functions: list of one element containing a matrix \emph{d} X \emph{n.out}: each row contains the evaluations of the original function first derivatives center along a dimension. \emph{d}: number of function's components}
 
 \item{similarity.orig}{vector: original similarities between the original functions and the original center.}
 
@@ -86,9 +89,9 @@ The function output is a list containing the following elements:
 
 \item{x.centers.final}{vector \emph{n.out}: abscissas of the final function centers and/or of the final function first derivatives centers.}
 
-\item{y0.centers.final}{matrix \emph{n.clust.final} X \emph{n.out}: rows contain the evaluations of the final functions centers. \code{y0.centers.final} is \code{NULL} if \code{y0} is not given as input.}
+\item{y0.centers.final}{for unidimensional functions: matrix \emph{n.clust.final} X \emph{n.out}: rows contain the evaluations of the final functions centers. \cr for multidimesional functions: list of \emph{n.clust} elements. Each element of the list is associated to a cluster and it is a matrix \emph{d} X \emph{n.out}: each row contains the evaluations of the final function center along a dimension. \emph{d}: number of function's components. \cr \code{y0.centers.final} is \code{NULL} if \code{y0} is not given as input.}
 
-\item{y1.centers.final}{matrix \emph{n.clust.final} X \emph{n.out}: rows contains the evaluations of the final derivatives centers. \code{y1.centers.final} is \code{NULL} if the chosen similarity measure does not concern function first derivatives.}
+\item{y1.centers.final}{for unidimensional functions: matrix \emph{n.clust.final} X \emph{n.out}: rows contains the evaluations of the final derivatives centers. \cr for multidimesional functions: list of \emph{n.clust} elements. Each element of the list is associated to a cluster and it is a matrix \emph{d} X \emph{n.out}: each row contains the evaluations of the final derivatives center along a dimension. \emph{d}: number of function's components. \cr \code{y1.centers.final} is \code{NULL} if the chosen similarity measure does not concern function first derivatives. }
 
 \item{labels}{vector: cluster assignments.}
 

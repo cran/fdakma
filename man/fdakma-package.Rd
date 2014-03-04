@@ -12,14 +12,14 @@ fdakma jointly performs clustering and alignment of a functional dataset (multid
 \tabular{ll}{
 Package: \tab fdakma\cr
 Type: \tab Package\cr
-Version: \tab 1.0\cr
-Date: \tab 2013-05-04\cr
+Version: \tab 1.1\cr
+Date: \tab 2014-03-04\cr
 License: \tab GPL-3\cr
 }
 }
 
 \author{
-Mirco Patriarca, Laura Sangalli, Piercesare Secchi, Simone Vantini, Valeria Vitelli.
+Mirco Patriarca, Laura Sangalli, Piercesare Secchi, Simone Vantini, Valeria Vitelli, Alice Parodi.
 }
 
 \references{

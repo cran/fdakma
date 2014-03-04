@@ -8,7 +8,7 @@ function(
   seeds = NULL,
   optim.method = 'L-BFGS-B',
   span = 0.15, t.max = 0.1, m.max = 0.1, n.out = NULL,
-  tol = 0.01, fence = TRUE ,iter.max = 100, show.iter = 0) 
+  tol = 0.01, fence = TRUE ,iter.max = 100, show.iter = 0, nstart=1, return.all=FALSE) 
 {
   n.clust.original <- n.clust
   y0.original <- y0  
@@ -119,166 +119,189 @@ function(
     
     st  <- coeff[1]*x.reg[i,] + coeff[2]  # registered abscissa
     index.temp <- 0
-    for(l in 1:r){
-      template.t <- templates[[k]][l,]
-      b <- !is.na(template.t)
-      
-      if (work.with.deriv.kma==1)
-      {data.t <- approx(st, data1[i,,l], xout=x.out)$y}
-      
-      if (work.with.deriv.kma==0)
-      {data.t <- approx(st, data0[i,,l], xout=x.out)$y}
-      
-      a <- !is.na(data.t)
-      sel <- a&b
-      data.t <- data.t[sel]
-      template.t <- template.t[sel]
-      
-      x.out.temp <- x.out[sel]
-      #x.out <- x.out[sel]
-      #distance <- kma.similarity(data.t,template.t,similarity.method)
-      if (work.with.deriv.kma==1)
-      {        
-        distance <- kma.similarity(
-          x.f = x.out.temp, y1.f = data.t,
-          x.g = x.out.temp, y1.g = template.t,
-          similarity.method = similarity.method, unif.grid = FALSE)
-      }
-      if (work.with.deriv.kma==0)
-      {
-        distance <- kma.similarity(
-          x.f = x.out.temp, y0.f = data.t,
-          x.g = x.out.temp, y0.g = template.t,
-          similarity.method = similarity.method, unif.grid = FALSE)
-      }
-      
-      index.temp <- index.temp + distance
-    } # end cycle on the curve dimension
     
-    if(similarity.method == 'd1.pearson' 
-       || similarity.method == 'd0.pearson'
-       || similarity.method == 'd1.pearson.mean'
-       || similarity.method == 'd0.pearson.mean'
+    template.t <- templates[[k]][1,]
+    b <- !is.na(template.t)
+      
+    if (work.with.deriv.kma==1)
+    {data.t <- approx(st, data1[i,,1], xout=x.out)$y}
+      
+    if (work.with.deriv.kma==0)
+    {data.t <- approx(st, data0[i,,1], xout=x.out)$y}
+      
+    a <- !is.na(data.t)
+    sel <- a&b
+    data.t <- data.t[sel]
+   template.t <- templates[[k]][,sel]
+      
+    if (r>1) 
+        {
+        	data_def <- data.t
+        	for(l in 2:r){
+                
+                if (work.with.deriv.kma==1)
+       			{data.t <- approx(st, data1[i,,l], xout=x.out)$y}
+          
+        		if (work.with.deriv.kma==0)
+        		{data.t <- approx(st, data0[i,,l], xout=x.out)$y}
+         
+         		data.t <- data.t[sel]
+         		data_def <- rbind(data_def, data.t)		
+    	   	}  
+    	   	data.t <- data_def        
+        }
+
+    
+    
+    x.out.temp <- x.out[sel]
+        
+    if (work.with.deriv.kma==1)
+    {        
+      distance <- kma.similarity( x.f = x.out.temp, y1.f = t(data.t), x.g = x.out.temp, y1.g = t(template.t),
+          similarity.method = similarity.method, unif.grid = FALSE)
+    }
+    if (work.with.deriv.kma==0)
+    {
+      distance <- kma.similarity(  x.f = x.out.temp, y0.f = t(data.t), x.g = x.out.temp, y0.g = t(template.t),
+          similarity.method = similarity.method, unif.grid = FALSE)
+    }
+      
+    index.temp <- index.temp + distance
+   
+    
+        if(similarity.method == 'd1.pearson'  || similarity.method == 'd0.pearson'|| similarity.method == 'd1.pearson.mean' || similarity.method == 'd0.pearson.mean'
     )
-    {o <- -index.temp/r}
-    
-    if(similarity.method == 'd1.L2' 
-       || similarity.method == 'd0.L2'
-       || similarity.method == 'd1.L2.centered'
-       || similarity.method == 'd0.L2.centered'
-    ) 
-    {o <- +index.temp/r}
-    
+    {
+    	o <- -index.temp
+    }else{
+    	o <- index.temp
+    	}
+
     o
   }
   
   best_warping_only.dilation <- function(coeff){
     st  <- coeff*x.reg[i,]  # registered abscissa
-    index.temp <- 0
-    for(l in 1:r){
-      template.t <- templates[[k]][l,]
-      b <- !is.na(template.t)
-      
-      if (work.with.deriv.kma==1)
-      {data.t <- approx(st, data1[i,,l], xout=x.out)$y}
-      
-      if (work.with.deriv.kma==0)
-      {data.t <- approx(st, data0[i,,l], xout=x.out)$y}
-      
-      a <- !is.na(data.t)
-      sel <- a&b
-      data.t <- data.t[sel]
-      template.t <- template.t[sel]
-      
-      x.out.temp <- x.out[sel]
-      
-      #distance <- kma.similarity(data.t,template.t,similarity.method)
-      if (work.with.deriv.kma==1)
-      {
-        distance <- kma.similarity(
-          x.f = x.out.temp, y1.f = data.t, 
-          x.g = x.out.temp, y1.g = template.t,
-          similarity.method = similarity.method, unif.grid = FALSE)
-      }
-      if (work.with.deriv.kma==0)
-      {
-        distance <- kma.similarity(
-          x.f = x.out.temp, y0.f = data.t,
-          x.g = x.out.temp, y0.g = template.t,
-          similarity.method = similarity.method, unif.grid = FALSE)
-      }
-      
-      index.temp <- index.temp + distance
-    } # end cycle on the curve dimension
+     index.temp <- 0
     
-    if(similarity.method == 'd1.pearson' 
-       || similarity.method == 'd0.pearson'
+    template.t <- templates[[k]][1,]
+    b <- !is.na(template.t)
+      
+    if (work.with.deriv.kma==1)
+    {data.t <- approx(st, data1[i,,1], xout=x.out)$y}
+      
+    if (work.with.deriv.kma==0)
+    {data.t <- approx(st, data0[i,,1], xout=x.out)$y}
+      
+    a <- !is.na(data.t)
+    sel <- a&b
+    data.t <- data.t[sel]
+    template.t <- templates[[k]][,sel]
+      
+    if (r>1) 
+        {
+        	data_def <- data.t
+        	for(l in 2:r){
+                
+                if (work.with.deriv.kma==1)
+       			{data.t <- approx(st, data1[i,,l], xout=x.out)$y}
+          
+        		if (work.with.deriv.kma==0)
+        		{data.t <- approx(st, data0[i,,l], xout=x.out)$y}
+         
+         		data.t <- data.t[sel]
+         		data_def <- rbind(data_def, data.t)		
+    	   	}    
+    	   	data.t <- data_def      
+        }
+    
+    
+    x.out.temp <- x.out[sel]
+        
+    if (work.with.deriv.kma==1)
+    {        
+      distance <- kma.similarity( x.f = x.out.temp, y1.f = t(data.t), x.g = x.out.temp, y1.g = t(template.t),
+          similarity.method = similarity.method, unif.grid = FALSE)
+    }
+    if (work.with.deriv.kma==0)
+    {
+      distance <- kma.similarity(  x.f = x.out.temp, y0.f = t(data.t), x.g = x.out.temp, y0.g = t(template.t),
+          similarity.method = similarity.method, unif.grid = FALSE)
+    }
+      
+    index.temp <- index.temp + distance
+   
+    
+    if(similarity.method == 'd1.pearson'  || similarity.method == 'd0.pearson'|| similarity.method == 'd1.pearson.mean' || similarity.method == 'd0.pearson.mean'
     )
-    {o <- -index.temp/r}
-    
-    if(similarity.method == 'd1.L2' 
-       || similarity.method == 'd0.L2'
-       || similarity.method == 'd1.L2.centered'
-       || similarity.method == 'd0.L2.centered'
-    ) 
-    {o <- +index.temp/r}
-    
+    {
+    	o <- -index.temp
+    }else{
+    	o <- index.temp
+    	}
+
     o
   }
   
   best_warping_only.shift <- function(coeff){
     st  <- x.reg[i,] + coeff  # registered abscissa
-    index.temp <- 0
-    for(l in 1:r){
-      template.t <- templates[[k]][l,]
-      b <- !is.na(template.t)
-      
-      if (work.with.deriv.kma==1)
-      {data.t <- approx(st, data1[i,,l], xout=x.out)$y}
-      
-      if (work.with.deriv.kma==0)
-      {data.t <- approx(st, data0[i,,l], xout=x.out)$y}
-      
-      a <- !is.na(data.t)
-      sel <- a&b
-      data.t <- data.t[sel]
-      template.t <- template.t[sel]
-      
-      x.out.temp <- x.out[sel]
-      
-      #distance <- kma.similarity(data.t,template.t,similarity.method)
-      if (work.with.deriv.kma==1)
-      {
-        distance <- kma.similarity(
-          x.f = x.out.temp, y1.f = data.t, 
-          x.g = x.out.temp, y1.g = template.t,
-          similarity.method = similarity.method, unif.grid = FALSE)
-      }
-      if (work.with.deriv.kma==0)
-      {
-        distance <- kma.similarity(
-          x.f = x.out.temp, y0.f = data.t, 
-          x.g = x.out.temp, y0.g = template.t,
-          similarity.method = similarity.method, unif.grid = FALSE)
-      }
-      
-      index.temp <- index.temp + distance
-    } # end cycle on the curve dimension
+      index.temp <- 0
     
-    if(similarity.method == 'd1.pearson' 
-       || similarity.method == 'd0.pearson'
+    template.t <- templates[[k]][1,]
+    b <- !is.na(template.t)
+      
+    if (work.with.deriv.kma==1)
+    {data.t <- approx(st, data1[i,,1], xout=x.out)$y}
+      
+    if (work.with.deriv.kma==0)
+    {data.t <- approx(st, data0[i,,1], xout=x.out)$y}
+      
+    a <- !is.na(data.t)
+    sel <- a&b
+    data.t <- data.t[sel]
+    template.t <- templates[[k]][,sel]
+    
+    if (r>1) 
+        {
+        	data_def <- data.t
+        	for(l in 2:r){
+                
+                if (work.with.deriv.kma==1)
+       			{data.t <- approx(st, data1[i,,l], xout=x.out)$y}
+          
+        		if (work.with.deriv.kma==0)
+        		{data.t <- approx(st, data0[i,,l], xout=x.out)$y}
+         
+         		data.t <- data.t[sel]
+         		data_def <- rbind(data_def, data.t)		
+    	   	}    
+    	   	data.t <- data_def      
+        }
+    
+    
+    x.out.temp <- x.out[sel] 
+    if (work.with.deriv.kma==1)
+    {        
+      distance <- kma.similarity( x.f = x.out.temp, y1.f = t(data.t), x.g = x.out.temp, y1.g = t(template.t),
+          similarity.method = similarity.method, unif.grid = FALSE)
+    }
+    if (work.with.deriv.kma==0)
+    {
+      distance <- kma.similarity(  x.f = x.out.temp, y0.f = t(data.t), x.g = x.out.temp, y0.g = t(template.t),
+          similarity.method = similarity.method, unif.grid = FALSE)
+    }
+    index.temp <- index.temp + distance
+   
+    
+        if(similarity.method == 'd1.pearson'  || similarity.method == 'd0.pearson'|| similarity.method == 'd1.pearson.mean' || similarity.method == 'd0.pearson.mean'
     )
-    {o <- -index.temp/r}
-    
-    if(similarity.method == 'd1.L2' 
-       || similarity.method == 'd0.L2'
-       || similarity.method == 'd1.L2.centered'
-       || similarity.method == 'd0.L2.centered'
-    ) 
-    {o <- +index.temp/r}
-    
+    {
+    	o <- -index.temp
+    }else{
+    	o <- index.temp
+    	}
     o
-  }
+ }
   
   
   ### Parameters handling ###
@@ -310,26 +333,29 @@ function(
     stop('"n.clust" must be positive')
   }
   
-  # Controls if seeds has a feasible dimension
-  if (length(seeds)>n.clust)
-  {
-    stop('length of "seeds" must be inferior or equal to n.clust')
-  }
-  
-  
   # Controls if seeds has feasible values
   if (length(dim(y1))!=0){n.obs <- dim(y1)[1]}
   if (length(dim(y0))!=0){n.obs <- dim(y0)[1]}
   
-  if (length(seeds)!=0)
+  # Controls if seeds has a feasible dimension
+  
+  if (is.null(seeds))
   {
-    for (contr in 1:length(seeds))
-    {     
-      if (seeds[contr]>n.obs || seeds[contr]<=0)
-      {
-        stop('At least a value of "seeds" is not valid (is negative or null or superior to the number of observations)')
-      }
-    }
+  	 seeds <- sample(1:n.obs,n.clust)
+  }
+  if (length(dim(seeds))==0)
+  {
+  	seeds <- as.matrix(t(seeds))
+  }
+  if (length(seeds[1,])>n.clust)
+  {
+    stop('number of columns of "seeds" must be inferior or equal to n.clust')
+  }
+  
+ 
+  if (length(which(seeds>0 & seeds<=n.obs ))!= length(seeds))
+  {
+     stop('At least a value of "seeds" is not valid (is negative or null or superior to the number of observations)')
   }
   
   
@@ -473,7 +499,7 @@ function(
       data1 <- y1
     }else{
       r <- r.deriv <- 1    
-      data1 <- array(0,dim=c(n.obs,n.camp,r+1))
+      data1 <- array(0,dim=c(n.obs,n.camp,r))
       data1[,,1:r] <- y1
       # if r = 1, data is NOT a matrix but a three dimensional array
       data1 <- data1[,,1:r,drop=FALSE]
@@ -487,7 +513,7 @@ function(
       data0 <- y0
     }else{
       r <- r.orig <- 1    
-      data0 <- array(0,dim=c(n.obs,n.camp,r+1))
+      data0 <- array(0,dim=c(n.obs,n.camp,r))
       data0[,,1:r] <- y0
       # if r = 1, data is NOT a matrix but a three dimensional array
       data0 <- data0[,,1:r,drop=FALSE]
@@ -500,46 +526,10 @@ function(
     {stop('original functions dimensions must agree with first derivatives')}
   }
   
-  #############################
-  # Here we "depure" functions from the mean
-  MEAN.YES <- FALSE
+
   similarity.method.available_mean <- c( 'd0.L2.centered', 
                                         'd1.L2.centered')
-  
-  #if (similarity.method %in% similarity.method.available_mean)
-  if ( MEAN.YES==TRUE)
-  {
-    MEAN.YES <- TRUE
-    
-    remind.means.y1 <- array(0,dim=c(n.obs,1,r))
-    remind.means.y0 <- array(0,dim=c(n.obs,1,r))
-    
-    if (length(dim(y1))!=0)
-    {
-      for(i in 1:n.obs)
-      {
-        for (l in 1:r)
-        {
-          remind.means.y1[i,,l] <- mean(data1[i,,l],na.rm=TRUE)
-          data1[i,,l] <- data1[i,,l] - mean(data1[i,,l],na.rm=TRUE)
-        }
-      }
-    }
-    
-    if (length(dim(y0))!=0)
-    {
-      for(i in 1:n.obs)
-      {
-        for (l in 1:r)
-        {
-          remind.means.y0[i,,l] <- mean(data0[i,,l],na.rm=TRUE)
-          data0[i,,l] <- data0[i,,l] - mean(data0[i,,l],na.rm=TRUE)
-        }
-      }
-    }
-  }
-  
-  
+   
   ### coherence checks (2) ###
   ###----------------------###
   
@@ -580,6 +570,13 @@ function(
   ### method initialization ###
   ###-----------------------###
   
+  OUT <- NULL
+  
+	for(s in 1:nstart)
+	{
+
+  
+  
   # registered abscissa
   x.reg <- x
   # abscissa for the template curves
@@ -587,7 +584,7 @@ function(
   
   # similarity index
   index <- rep(0,n.obs)
-  index.old <- rep(10,n.obs)
+  index.old <- rep(-1,n.obs)
   index.list <- NULL    # list of similarity indexes along iterations
   
   # warping functions
@@ -625,21 +622,14 @@ function(
   # Here centers are chosen for the first time
   # (randomly if seeds=NULL, otherwise as specified 
   # by user in "seeds")
-  if (length(seeds)==0)
+  if (dim(seeds)[1]<s)
   {
-    # Random choice of seeds(=centers indexes) of first iteration
-    u <- sample(1:n.obs,n.clust)
+   		 # Random choice of seeds(=centers indexes) of first iteration
+   		 u <- sample(1:n.obs,n.clust)
+  } else{
+  		 u <- seeds[s,]	
   }
   
-  if (length(seeds)!=0)
-  {
-    # Take them as initial seeds 
-    if (length(seeds)==n.clust) { u <- seeds }
-    # Control if "seeds" has a feasible value
-    if (length(seeds)<n.clust || length(seeds)>n.clust)
-    {stop('length of "seeds" must be equal to "n.clust"')}
-  }
-    
   #   Here we approximate centers in the abscissas x.out 
   #   (hence on n.out points between min(x) and max(x))
   for(j in 1:n.clust){
@@ -695,12 +685,12 @@ function(
     x.com  <- seq(max(x[,1], na.rm=TRUE),min(x[,dim(x)[2]], na.rm=TRUE),
                   length=n.out)
     
+    
     # Compute registered functions
-    data0.reg<-array(0,dim=c(n.obs,n.out,r+1))
-    data1.reg<-array(0,dim=c(n.obs,n.out,r+1))
+    data0.reg<-array(0,dim=c(n.obs,n.out,r))
+    data1.reg<-array(0,dim=c(n.obs,n.out,r))
     for(l in 1:r){
       for(k in 1:n.obs){
-        
         if (work.with.deriv.kma==1)
         {data1.reg[k,,l]<-approx(x[k,],data1[k,,l],xout=x.com)$y}
         if (work.with.deriv.kma==0)
@@ -725,35 +715,42 @@ function(
     
     
     # First we find the medoid of original data, saving
-    # all the similairty indexex in a matrix called
+    # all the similarity indexex in a matrix called
     # distanze.matrix
-    for(l in 1:r){
       for(i in 1:length(data.selec)){
         for(j in 1:length(data.selec)){
-                    
+          
+          b <- !is.na(data1.reg[i,,1])
+          a <- !is.na(data1.reg[j,,1])
+       	  sel <- a&b          
           if (work.with.deriv.kma==1)
           #{ecco <- kma.similarity(data1.reg[i,,l],data1.reg[j,,l],similarity.method)}
-          {
+          { 	
+          	b <- !is.na(data1.reg[i,,1])
+          	a <- !is.na(data1.reg[j,,1])
+       	  	sel <- a&b          
             ecco <- kma.similarity(
-            x.f = x.com, y1.f = data1.reg[i,,l],
-            x.g = x.com, y1.g = data1.reg[j,,l],
+            x.f = x.com[sel], y1.f = data1.reg[i,sel,],
+            x.g = x.com[sel], y1.g = data1.reg[j,sel,],
             similarity.method = similarity.method, unif.grid = FALSE)
           }
           
           if (work.with.deriv.kma==0)
           #{ecco <- kma.similarity(data0.reg[i,,l],data0.reg[j,,l],similarity.method)}
           {
+          	b <- !is.na(data0.reg[i,,1])
+          	a <- !is.na(data0.reg[j,,1])
+       	  	sel <- a&b 
             ecco <- kma.similarity(
-              x.f = x.com, y0.f = data0.reg[i,,l],
-              x.g = x.com, y0.g = data0.reg[j,,l],
+              x.f = x.com[sel], y0.f = data0.reg[i,sel,],
+              x.g = x.com[sel], y0.g = data0.reg[j,sel,],
               similarity.method = similarity.method, unif.grid = FALSE)
           }
-            
           distanze[i]<-distanze[i]+ecco
           distanze.matrix[i,j] <- distanze.matrix[i,j] + ecco
         }
       }  
-    }
+    
     
     if(similarity.method == 'd1.pearson' 
        || similarity.method == 'd0.pearson'
@@ -769,6 +766,7 @@ function(
     
     remind.center.orig <- data.selec[m]
     
+
     for(l in 1:r)
     {
       # Here we approx the medoid of original similarity 
@@ -781,6 +779,8 @@ function(
       y0 <- rbind(y0, temp)
       
     }
+    
+    
     # Here we end the research and approximation of the medoid of original data
     
     # Now we compute (in reality we already did that, 
@@ -813,7 +813,7 @@ function(
     
     data.selec <- 1:n.obs
     y0 <- NULL
-    
+        
     for(l in 1:r){
       
       if (work.with.deriv.kma==1)
@@ -830,7 +830,7 @@ function(
     templates.iter1.vialoess <- c(templates.iter1.vialoess, list(y0))
     
     # Calculus of quantities from first iteration
-    #x.center.orig <- x.out
+    # x.center.orig <- x.out
     if (work.with.deriv.kma==1)
     {
       y1.center.orig <-  templates.iter1.vialoess
@@ -850,70 +850,63 @@ function(
       #index.temp.iter1.vec <- rep(0,n.clust)
       index.temp.iter1.vec <- rep(0,1)
       #for(k in 1:n.clust){
-      for(k in 1:1){
+ 
         index.temp.iter1 <- 0
-        for(l in 1:r){
-          #template.t <- templates[[k]][l,]
-          template.t <- templates.iter1.vialoess[[1]]
-          b <- !is.na(template.t)
+        
+        #template.t <- templates[[k]][l,]
+        template.t <- templates.iter1.vialoess[[1]][1,]
+        b <- !is.na(template.t)
+        if (work.with.deriv.kma==1)
+        {data.t <- approx(x[i,], data1[i,,1], xout=x.center.orig)$y}
+          
+        if (work.with.deriv.kma==0)
+        {data.t <- approx(x[i,], data0[i,,1], xout=x.center.orig)$y}
+          
+        a <- !is.na(data.t)
+        sel <- a&b
+        data.t <- data.t[sel]
+        
+        x.center.orig.temp <- x.center.orig[sel]
+        
+        template.t <- templates.iter1.vialoess[[1]][,sel]
          
-          #OK
-          if (work.with.deriv.kma==1)
-          {data.t <- approx(x[i,], data1[i,,l], xout=x.center.orig)$y}
+        if (r>1) 
+        {
+        	data_def <- data.t
+        	for(l in 2:r){
+                
+                if (work.with.deriv.kma==1)
+       			{data.t <- approx(x[i,], data1[i,,l], xout=x.center.orig)$y}
           
-          if (work.with.deriv.kma==0)
-          {data.t <- approx(x[i,], data0[i,,l], xout=x.center.orig)$y}
-          
-          a <- !is.na(data.t)
-          sel <- a&b
-          data.t <- data.t[sel]
-          template.t <- template.t[sel]
-          
-          x.center.orig.temp <- x.center.orig[sel]
-          
-          #distance <- kma.similarity(data.t,template.t,similarity.method)
-          #NO
-          #distance <- kma.similarity(data.t,template.t[[1]],similarity.method)
-          #SI
-          #distance <- kma.similarity(data.t,template.t,similarity.method)
-          
-          if (work.with.deriv.kma==1)
+        		if (work.with.deriv.kma==0)
+        		{data.t <- approx(x[i,], data0[i,,l], xout=x.center.orig)$y}
+         
+         		data.t <- data.t[sel]
+         		data_def <- rbind(data_def, data.t)
+         	}      
+         	data.t <- data_def    
+        }
+      
+         x.center.orig.temp <- x.center.orig[sel]
+         
+        if (work.with.deriv.kma==1)
           {
-            distance <- kma.similarity(
-              x.f = x.center.orig.temp, y1.f = data.t,
-              x.g = x.center.orig.temp, y1.g = template.t,
-              similarity.method = similarity.method, unif.grid = FALSE)
+            distance <- kma.similarity(x.f = x.center.orig.temp, y1.f = t(data.t),  x.g = x.center.orig.temp, y1.g = t(template.t), similarity.method = similarity.method, unif.grid = FALSE)
           }
           
           if (work.with.deriv.kma==0)
           {
-            distance <- kma.similarity(
-              x.f = x.center.orig.temp, y0.f = data.t,
-              x.g = x.center.orig.temp, y0.g = template.t,
-              similarity.method = similarity.method, unif.grid = FALSE)
+            distance <- kma.similarity(  x.f = x.center.orig.temp, y0.f = t(data.t), x.g = x.center.orig.temp, y0.g = t(template.t),  similarity.method = similarity.method, unif.grid = FALSE)
           }
           
           index.temp.iter1 <- index.temp.iter1 + distance
+          similarity.orig  <- c(similarity.orig,index.temp.iter1)
         }
-        index.temp.iter1 = index.temp.iter1/r
-        index.temp.iter1.vec[k] <- index.temp.iter1             
-      }
-      
-      # similarity indexes of first iteration
-      if(similarity.method == 'd1.pearson' 
-         || similarity.method == 'd0.pearson'
-      ) 
-      {similarity.orig  <- c(similarity.orig,  max(index.temp.iter1.vec))}
-      if(similarity.method == 'd1.L2' 
-         || similarity.method == 'd0.L2'
-         || similarity.method == 'd1.L2.centered'
-         || similarity.method == 'd0.L2.centered'
-      ) 
-      {similarity.orig  <- c(similarity.orig,  min(index.temp.iter1.vec))}
-      
+     
     }
-    # END Calculus of quantities from first iteration
-  }
+    
+  # END Calculus of quantities from first iteration
+ 
   
   #################################################################
   
@@ -922,14 +915,30 @@ function(
   
   ### k-mean alignment method ###
   ###-------------------------###
+  
+  still.in <- TRUE
     
-  while( (sum((index - index.old) < tol) < n.obs | sum(abs(labels - labels.old)) > 0) & iter < iter.max)
+   if (similarity.method == 'd1.L2'  || similarity.method == 'd0.L2' || similarity.method == 'd1.L2.centered' || similarity.method == 'd0.L2.centered')
+  {
+  	index.old <- rep(1, n.obs)
+  }  
+    
+  while(( (((sum((index - index.old) < tol) < n.obs) && (similarity.method == 'd1.pearson' || similarity.method == 'd0.pearson')) || ((sum((-index + index.old) < tol) < n.obs) && (similarity.method == 'd1.L2'  || similarity.method == 'd0.L2' || similarity.method == 'd1.L2.centered' || similarity.method == 'd0.L2.centered')) ) && still.in) && iter < iter.max)
   {   
     
     # labels
     labels.old <- labels
     # similarity measure
     index.old <- index
+    
+     if ((similarity.method == 'd1.L2'  || similarity.method == 'd0.L2' || similarity.method == 'd1.L2.centered' || similarity.method == 'd0.L2.centered' || similarity.method=='d0ed1.L2') && iter==0)
+ 	{
+  		index.old <- rep(10^5, n.obs)
+  	}
+  
+    templates.old <- templates
+    
+    
     index <- NULL
     
     # iterations index
@@ -942,14 +951,18 @@ function(
     
     if (show.iter==1)
     {
+      output.text0 <- paste("Starting step: ", s, collapse = "\t")
+  	  output.text02 <- paste("Seeds: ", u)
       output.text1 <- paste('Num.cluster: ', n.clust, collapse='\t')
       output.text2 <- paste('Alignment: ', warping.method, collapse='\t')
       output.text3 <- paste('Iteration: ', iter, collapse='\t')
       #print(   '*********************************************');
+      print(output.text0)
+   	  print(output.text02)
       print( output.text1 );
       print( output.text2 );
       print( output.text3 );
-      print(   '*********************************************');
+      print('*********************************************');
     
     }
     
@@ -970,6 +983,10 @@ function(
             if (optim.method=='L-BFGS-B')
             {
               result <- optim(c(0), best_warping_only.shift, method=optim.method, lower = lower.warp[2], upper = upper.warp[2])
+              if (result$convergence!=0)
+              {
+              	result <- optim(c(0), best_warping_only.shift, method=optim.method,control=list(parscale=1e-15), lower = lower.warp[2], upper = upper.warp[2])
+              }
             }
             if (optim.method=='SANN')
             {
@@ -992,6 +1009,11 @@ function(
             if (optim.method=='L-BFGS-B')
             {
               result <- optim(c(1), best_warping_only.dilation, method=optim.method, lower = lower.warp[1], upper = upper.warp[1])
+                if (result$convergence!=0)
+               {
+               	result <- optim(c(1), best_warping_only.dilation, method=optim.method,control=list(parscale=1e-15), lower = lower.warp[2], upper = upper.warp[2])
+              }
+
             } 
             if (optim.method=='SANN')
             {
@@ -1014,6 +1036,11 @@ function(
             if (optim.method=='L-BFGS-B')
             { 
               result <- optim(c(1,0), best_warping, method=optim.method, lower = lower.warp, upper = upper.warp)
+               if (result$conergence!=0)
+               {
+               	result <- optim(c(1,0), best_warping, method=optim.method,control=list(parscale=c(1e-15, 1e-15)), lower = lower.warp[2], upper = upper.warp[2])
+              }
+
             }
             if (optim.method=='SANN')
             {
@@ -1029,7 +1056,6 @@ function(
             warping_temp[,k] <- result$par
           }
           
-          #print(paste('FINITO CON LA CURVA i: ',i))
           
           if(similarity.method == 'd1.pearson' 
              || similarity.method == 'd0.pearson'
@@ -1047,42 +1073,56 @@ function(
           
           warping_temp[,k] <- c(1,0)
           temp <- 0
-          for(l in 1:r){
+          template.t <- templates[[k]][1,]
+          b <- !is.na(template.t)
+          
+          if (work.with.deriv.kma==1)
+          {data.t <- approx(x.reg[i,], data1[i,,1], xout=x.out)$y}
+           
+          if (work.with.deriv.kma==0)
+          {data.t <- approx(x.reg[i,], data0[i,,1], xout=x.out)$y}
             
-            if (work.with.deriv.kma==1)
-            {data.t <- approx(x.reg[i,], data1[i,,l], xout=x.out)$y}
+          a <- !is.na(data.t)    
+          sel <- a&b 
+          data.t <- data.t[sel]       
+          template.t <- templates[[k]][,sel]
+          x.out.temp <- x.out[sel]
+          
+          if (r>1) 
+        	{
+
+			data_def <- data.t
+          	for(l in 2:r){
             
-            if (work.with.deriv.kma==0)
-            {data.t <- approx(x.reg[i,], data0[i,,l], xout=x.out)$y}
+            	if (work.with.deriv.kma==1)
+          		{data.t <- approx(x.reg[i,], data1[i,,l], xout=x.out)$y}
+          	 
+          		if (work.with.deriv.kma==0)
+          		{data.t <- approx(x.reg[i,], data0[i,,l], xout=x.out)$y}
             
-            a <- !is.na(data.t)    
-            template.t <- templates[[k]][l,]
-            b <- !is.na(template.t)
-            sel <- a&b
-            data.t <- data.t[sel]       
-            template.t <- template.t[sel]
-            
-            x.out.temp <- x.out[sel]
+           		data.t <- data.t[sel]
+           		data_def <- rbind(data_def, data.t) 
+           	}
+           	data.t <- data_def
+          	}
+          	
+          	x.out.temp <- x.out[sel]
+          	
             #temp <- temp + kma.similarity(data.t,template.t,similarity.method)
             
             if (work.with.deriv.kma==1)
             {
-              temp <- temp + kma.similarity(
-                x.f = x.out.temp, y1.f = data.t,
-                x.g = x.out.temp, y1.g = template.t,
+              temp <- temp + kma.similarity( x.f = x.out.temp, y1.f = t(data.t),  x.g = x.out.temp, y1.g = t(template.t),
                 similarity.method = similarity.method, unif.grid = FALSE)   
             }
             
             if (work.with.deriv.kma==0)
             {
-              temp <- temp + kma.similarity(
-                x.f = x.out.temp, y0.f = data.t,
-                x.g = x.out.temp, y0.g = template.t,
+              temp <- temp + kma.similarity(  x.f = x.out.temp, y0.f = t(data.t),  x.g = x.out.temp, y0.g = t(template.t),
                 similarity.method = similarity.method, unif.grid = FALSE)   
             }
             
-          }
-          index_temp <- c(index_temp, temp/r)
+          index_temp <- c(index_temp, temp)
           
         }
         
@@ -1096,10 +1136,7 @@ function(
         # cluster label
         labels[i] <- which.max(index_temp)
       }
-      if(similarity.method == 'd1.L2' 
-         || similarity.method == 'd0.L2'
-         || similarity.method == 'd1.L2.centered'
-         || similarity.method == 'd0.L2.centered'
+      if(similarity.method == 'd1.L2' || similarity.method == 'd0.L2' || similarity.method == 'd1.L2.centered' || similarity.method == 'd0.L2.centered'
       ) 
       {
         # similarity index
@@ -1114,7 +1151,8 @@ function(
       
     }# end cycle on the curves
     
-    #print('end cycle on the curves')
+    if (((sum(index)-sum(index.old))>0 && (similarity.method == 'd1.pearson' || similarity.method == 'd0.pearson') ) || ((sum(index)-sum(index.old))<0 && (similarity.method == 'd1.L2'  || similarity.method == 'd0.L2' || similarity.method == 'd1.L2.centered' || similarity.method == 'd0.L2.centered')) || (center.method=='k-means' && iter==2)|| iter==1)
+    {
     
     if (fence==TRUE)
     {
@@ -1299,6 +1337,10 @@ function(
                 if (optim.method=='L-BFGS-B')
                 {
                   result <- optim(c(init2), best_warping_only.shift, method=optim.method, lower = lower.warp.new[2], upper = upper.warp.new[2])
+                   if (result$convergence!=0)
+                   {
+                   	result <- optim(c(init2), best_warping_only.shift, method=optim.method,control=list(parscale=1e-15), lower = lower.warp[2], upper = upper.warp[2])
+                   }
                 }
                 if (optim.method=='SANN')
                 {
@@ -1320,6 +1362,11 @@ function(
                 if (optim.method=='L-BFGS-B')
                 {
                   result <- optim(c(init1), best_warping_only.dilation, method=optim.method, lower = lower.warp.new[1], upper = upper.warp.new[1])
+                  if (result$convergence!=0)
+                   {
+                   	result <- optim(c(init1), best_warping_only.dilation, method=optim.method,control=list(parscale=1e-15), lower = lower.warp[2], upper = upper.warp[2])
+                 
+                   }
                 }
                 if (optim.method=='SANN')
                 {
@@ -1341,6 +1388,10 @@ function(
                 if (optim.method=='L-BFGS-B')
                 {
                   result <- optim(c(init1,init2), best_warping, method=optim.method, lower = lower.warp.new, upper = upper.warp.new)
+                   if (result$conergence!=0)
+                   {
+                   	result <- optim(c(init1, init2), best_warping, method=optim.method,control=list(parscale=c(1e-15, 1e-15)), lower = lower.warp[2], upper = upper.warp[2])
+                   }
                 }
                 if (optim.method=='SANN')
                 {
@@ -1468,8 +1519,8 @@ function(
       x.com  <- seq(max(x.reg[,1], na.rm=T),min(x.reg[,dim(x.reg)[2]], na.rm=T), length=n.out)
             
       # Compute registered functions
-      data0.reg<-array(0,dim=c(n.obs,n.out,r+1))
-      data1.reg<-array(0,dim=c(n.obs,n.out,r+1))
+      data0.reg<-array(0,dim=c(n.obs,n.out,r))
+      data1.reg<-array(0,dim=c(n.obs,n.out,r))
       for(l in 1:r){
         for(k in 1:n.obs){
           
@@ -1496,50 +1547,56 @@ function(
         data.selec <- which(labels==k)
         y0 <- NULL
         
-        for(l in 1:r){
           
           distanze<-rep(0,length(data.selec))
           for(i in 1:length(data.selec)){
             for(j in 1:length(data.selec)){
               
               if (work.with.deriv.kma==1)
-              {distanze[i]<-distanze[i]+kma.similarity(
-                x.f = x.com, y1.f = data1.reg[i,,l],
-                x.g = x.com, y1.g = data1.reg[j,,l],
-                similarity.method = similarity.method, unif.grid = FALSE)}
-              
+              {	b <- !is.na(data1.reg[i,,1])
+          		a <- !is.na(data1.reg[j,,1])
+       	  		sel <- a&b 
+              	distanze[i]<-distanze[i]+kma.similarity(x.f = x.com[sel], y1.f = data1.reg[i,sel,],  x.g = x.com[sel], y1.g = data1.reg[j,sel,],  similarity.method = similarity.method, unif.grid = FALSE)
+              	}
               if (work.with.deriv.kma==0)
-              {distanze[i]<-distanze[i]+kma.similarity(
-                x.f = x.com, y0.f = data0.reg[i,,l],
-                x.g = x.com, y0.g = data0.reg[j,,l],
-                similarity.method = similarity.method, unif.grid = FALSE)}
+              {
+              	b <- !is.na(data0.reg[i,,1])
+          		a <- !is.na(data0.reg[j,,1])
+       	  		sel <- a&b 
+              	distanze[i]<-distanze[i]+kma.similarity( x.f = x.com[sel], y0.f = data0.reg[i,sel,], x.g = x.com[sel], y0.g = data0.reg[j,sel,],  similarity.method = similarity.method, unif.grid = FALSE)
+              	}
             }
           }
           
-          if(similarity.method == 'd1.L2' 
-             || similarity.method == 'd0.L2'
-             || similarity.method == 'd1.L2.centered'
-             || similarity.method == 'd0.L2.centered'
-          ) 
+          if(similarity.method == 'd1.L2'  || similarity.method == 'd0.L2'  || similarity.method == 'd1.L2.centered' || similarity.method == 'd0.L2.centered') 
           {m<-which.min(distanze)}
-          if(similarity.method == 'd1.pearson' 
-             || similarity.method == 'd0.pearson'
-          ) 
+          if(similarity.method == 'd1.pearson' || similarity.method == 'd0.pearson' ) 
           {m<-which.max(distanze)}         
           
-          if (work.with.deriv.kma==1)
-          {temp<-approx(x.reg[data.selec[m],],data1[data.selec[m],,l],xout=x.out)$y}
-          if (work.with.deriv.kma==0)
-          {temp<-approx(x.reg[data.selec[m],],data0[data.selec[m],,l],xout=x.out)$y}
+         for (l in 1:r)
+         {
+         	if (work.with.deriv.kma==1)
+         	 {temp<-approx(x.reg[data.selec[m],],data1[data.selec[m],,l],xout=x.out)$y}
+          	if (work.with.deriv.kma==0)
+         	 {temp<-approx(x.reg[data.selec[m],],data0[data.selec[m],,l],xout=x.out)$y}
           
-          y0 <- rbind(y0, temp) 
-        }
-        
+          	y0 <- rbind(y0, temp)
+         } 
         templates <- c(templates, list(y0))
       }
     }
     
-    
+    } else{
+  	
+  	index <- index.old
+  	labels <- labels.old
+  	templates <- templates.old
+  	iter <- iter-1
+  	still.in <- FALSE
+  	warning("The algorithm stops because the last iteration is associated to  a decrease of the total similarity; the results provided are associated to the second to last iteration.")
+  
+  }
+
   } # end k-mean alignment cycle
     
   if(iter==iter.max) warning('reached maximum number of iterations, method stops')
@@ -1579,7 +1636,7 @@ function(
   {
     templates <- NULL
     
-    for(k in unique(labels)){
+    for(k in sort(unique(labels))){
       
       data.selec <- which(labels==k)
       y0 <- NULL
@@ -1610,8 +1667,8 @@ function(
     x.com  <- seq(max(x.reg[,1], na.rm=T),min(x.reg[,dim(x.reg)[2]], na.rm=T), length=n.out)
     
     # Compute registered functions
-    data0.reg<-array(0,dim=c(n.obs,n.out,r+1))
-    data1.reg<-array(0,dim=c(n.obs,n.out,r+1))
+    data0.reg<-array(0,dim=c(n.obs,n.out,r))
+    data1.reg<-array(0,dim=c(n.obs,n.out,r))
     for(l in 1:r){
       for(k in 1:n.obs){
         
@@ -1632,33 +1689,31 @@ function(
       
       for(i in data.selec){
         for(j in data.selec){
-          for(l in 1:r){
             
             if (work.with.deriv.kma==1)
-            {distanze[i]<-distanze[i]+kma.similarity(
-              x.f = x.com, y1.f = data1.reg[i,,l],
-              x.g = x.com, y1.g = data1.reg[j,,l],
-              similarity.method = similarity.method, unif.grid = FALSE)}
+            {
+            	b <- !is.na(data1.reg[i,,1])
+          		a <- !is.na(data1.reg[j,,1])
+       	  		sel <- a&b 
+            	distanze[i]<-distanze[i]+kma.similarity( x.f = x.com[sel], y1.f = data1.reg[i,sel,], x.g = x.com[sel], y1.g = data1.reg[j,sel,],  similarity.method = similarity.method, unif.grid = FALSE)
+            	}
             
             if (work.with.deriv.kma==0)
-            {distanze[i]<-distanze[i]+kma.similarity(
-              x.f = x.com, y0.f = data0.reg[i,,l],
-              x.g = x.com, y0.g = data0.reg[j,,l],
-              similarity.method = similarity.method, unif.grid = FALSE)}
-            
-          }
+			{
+				b <- !is.na(data0.reg[i,,1])
+          		a <- !is.na(data0.reg[j,,1])
+       	  		sel <- a&b 
+            	distanze[i]<-distanze[i]+kma.similarity(  x.f = x.com[sel], y0.f = data0.reg[i,sel,], x.g = x.com[sel], y0.g = data0.reg[j,sel,],    similarity.method = similarity.method, unif.grid = FALSE)
+            }
+
         }
       }        
       
-      if(similarity.method == 'd1.pearson' 
-           || similarity.method == 'd0.pearson'
+      if(similarity.method == 'd1.pearson'  || similarity.method == 'd0.pearson'
       ) 
       {m<-which.max(distanze[data.selec])}
       
-      if(similarity.method == 'd1.L2' 
-         || similarity.method == 'd0.L2'
-         || similarity.method == 'd1.L2.centered'
-         || similarity.method == 'd0.L2.centered'
+      if(similarity.method == 'd1.L2' || similarity.method == 'd0.L2' || similarity.method == 'd1.L2.centered'   || similarity.method == 'd0.L2.centered'
       )
       {m<-which.min(distanze[data.selec])}
         
@@ -1736,7 +1791,7 @@ n.clust.final: ', n.clust.final)
         xt <- x.out
         integr <- yt
         
-        for (k in 1:n.clust.final)
+        for (k in sort(unique(labels)))
         {
           ind <- which(!is.na(yt[[k]]))
           ind.NA <- which(is.na(yt[[k]]))
@@ -1933,13 +1988,13 @@ n.clust.final: ', n.clust.final)
             if (quadratic.error.viakma.similarity==1)
             {
               if (work.with.deriv.kma==1)
-              {distance.sum <- distance.sum + kma.similarity (
+              {distance.sum <- distance.sum + kma.similarity(
                 x.f = xt, y1.f = integr.group,
                 x.g = xt, y1.g = y0.appr.group[dd,,],
                 similarity.method = similarity.method, unif.grid = FALSE)}
               
               if (work.with.deriv.kma==0)
-              {distance.sum <- distance.sum + kma.similarity (
+              {distance.sum <- distance.sum + kma.similarity(
                 x.f = xt, y0.f = integr.group,
                 x.g = xt, y0.g = y0.appr.group[dd,,],
                 similarity.method = similarity.method, unif.grid = FALSE)}
@@ -2206,7 +2261,7 @@ n.clust.final: ', n.clust.final)
   }
   
   
-  return(list(
+  total_result <- list(
         
     iterations = iter,
     x = x, # cambio x.orig=orig.absc
@@ -2238,6 +2293,29 @@ n.clust.final: ', n.clust.final)
     dilation.list = m.list,
     shift.list = t.list,
     dilation = m.final,
-    shift = t.final))
-  
+    shift = t.final)
+   
+  OUT <- c(OUT, list(total_result))  
+}
+if (return.all==TRUE)
+{
+	return(OUT)
+}else
+{
+	mean_sim <- rep(0, nstart)
+	for (i in 1:nstart)
+	{
+		mean_sim[i] <- mean(OUT[[i]]$similarity.final)
+		if (similarity.method == 'd1.pearson' || similarity.method == 'd0.pearson') 
+		{
+			j <- which.max(mean_sim)
+		}
+		if (similarity.method == 'd1.L2'  || similarity.method == 'd0.L2' || similarity.method == 'd1.L2.centered' || similarity.method == 'd0.L2.centered')
+		{
+			j <- which.min(mean_sim)
+		}
+	}
+	return(OUT[[j]])
+}
+
 }

@@ -30,8 +30,10 @@ function(
   {work.with.deriv.sim = 1}
   
   if (!unif.grid %in% c(TRUE,FALSE))
-  { stop('Value of parameter "unif.grid" not valid. 
-         It must be TRUE or FALSE') }
+  { 
+  	stop('Value of parameter "unif.grid" not valid. 
+         It must be TRUE or FALSE') 
+  }
   ##############################################
   
   var.temp <- FALSE
@@ -44,7 +46,15 @@ function(
   {
     var.temp <- TRUE
     var.temp2 <- TRUE
-    stop('Domains of two curves in kma.similarity function do not overlap. If using kma function of fdakma package, suggested reduction of "t.max" and/or "m.max" or set "fence" equal to TRUE')
+    warning('Domains of two curves in kma.similarity function do not overlap. If using kma function of fdakma package, suggested reduction of "t.max" and/or "m.max" or set "fence" equal to TRUE')
+     if (similarity.method=='d1.pearson' || similarity.method=='d0.pearson')
+     {
+     	OUT <- 0
+     }
+     if (similarity.method=='d0.L2' || similarity.method=='d1.L2' || similarity.method=='d0.L2.centered' || similarity.method=='d1.L2.centered')
+     {
+     	OUT <- MAX_NUMBER
+     }
   }
   
   if (var.temp==FALSE)
@@ -98,33 +108,37 @@ function(
     
     
     #  Transform/copy functions f and g in arrays to work uniquely
-    if( length(dim(y.f))==3 ){
+    if( length(dim(y.f))==2 ){
       
-      r.t <- dim(y.f)[3]
-      n.camp.f <- dim(y.f)[2]
-      n.camp.g <- dim(y.f)[2]
+      if (dim(y.f)[1]==1){
+    	y.f <- t(y.f)
+    	y.g <- t(y.g)
+   	 }
+      r.t <- dim(y.f)[2]
+      n.camp.f <- dim(y.f)[1]
+      n.camp.g <- dim(y.g)[1]
       
-      function1 <- y.f
-      function2 <- y.g
+      function1 <- array(0,dim=c(1,n.camp.f,r.t))
+      function1[, , 1:r.t] <- y.f
+      function2 <- array(0,dim=c(1,n.camp.g,r.t))
+      function2[, , 1:r.t] <- y.g
       
     }else{
       r.t <- 1
       if (class(y.f)=='numeric') 
       {
         n.camp.f <- length(y.f)
-      }else{n.camp.f <- dim(y.f)[2]}  
+      }else{n.camp.f <- dim(y.f)[1]}  
       
       if (class(y.g)=='numeric') 
       {
         n.camp.g <- length(y.g)
-      }else{n.camp.g <- dim(y.g)[2]}    
+      }else{n.camp.g <- dim(y.g)[1]}    
       
-      function1 <- array(0,dim=c(1,n.camp.f,r.t+1))
+      function1 <- array(0,dim=c(1,n.camp.f,r.t))
       function1[,,1:r.t] <- y.f
-      function1 <- function1[,,1:r.t,drop=FALSE]
-      function2 <- array(0,dim=c(1,n.camp.g,r.t+1))
+      function2 <- array(0,dim=c(1,n.camp.g,r.t))
       function2[,,1:r.t] <- y.g
-      function2 <- function2[,,1:r.t,drop=FALSE]
     }  
     
     # Find the common domain between the two functions
@@ -144,7 +158,15 @@ function(
       { 
         var.temp <- TRUE
         var.temp2 <- TRUE
-        stop('Domains of two curves in kma.similarity function do not overlap. If using kma function of fdakma package, suggested reduction of "t.max" and/or "m.max" or set "fence" equal to TRUE') 
+        warning('Domains of two curves in kma.similarity function do not overlap. If using kma function of fdakma package, suggested reduction of "t.max" and/or "m.max" or set "fence" equal to TRUE')
+    	if (similarity.method=='d1.pearson' || similarity.method=='d0.pearson')
+     	{
+     		OUT <- 0
+     	}
+     	if (similarity.method=='d0.L2' || similarity.method=='d1.L2' || similarity.method=='d0.L2.centered' ||similarity.method=='d1.L2.centered')
+     	{
+     		OUT <- MAX_NUMBER
+     	}
       }
       
       if (var.temp2==FALSE)
@@ -165,9 +187,17 @@ function(
         x.com.sim <- x.f  
         if (length(x.com.sim)<=1)
         { 
-          stop('Domains of two curves in kma.similarity function do not overlap. If using kma function of fdakma package, suggested reduction of "t.max" and/or "m.max" or set "fence" equal to TRUE') 
+     	    warning('Domains of two curves in kma.similarity function do not overlap. If using kma function of fdakma package, suggested reduction of "t.max" and/or "m.max" or set "fence" equal to TRUE')
+    	 	if (similarity.method=='d1.pearson' || similarity.method=='d0.pearson')
+     		{
+     			OUT <- 0
+    		}
+     		if (similarity.method=='d0.L2' || similarity.method=='d1.L2' || similarity.method=='d0.L2.centered' || similarity.method=='d1.L2.centered')
+    		{
+     			OUT <- MAX_NUMBER
+     		}
         }
-        
+      
         if(var.temp2==FALSE)
         {
           y.f.appr <- array(NA,dim=c(1,length(x.com.sim),r.t))
@@ -184,71 +214,19 @@ function(
     if (var.temp2==FALSE)
     {
       
-    
       #############################################
       # Compute the similarity index
       if (similarity.method=='d1.pearson' 
           || similarity.method=='d0.pearson')
       {
-        ###########################################
-        # Define the function prod.scal which compute the inner
-        # product between two functions f1 and f2 in 1-dimension
-        # (without dividing by the domain)
-        prod.scal.1D <- function(f1,f2)
-        {
-          somma <- 0
-          for (jj in 1:length(f1))
-          {somma = somma + f1[jj]*f2[jj]}
-          somma
-        }
-        ###########################################
-        if (r.t==1) { metodo.Mirco=2} # Simone's old method
-        # If the curves are 2-D, then the Simone's method 
-        # is faster, so we use his one.
-        
-        if (r.t>1) { metodo.Mirco=1} # Mirco's new method
-        # If the curves are 3-D we must use Mirco's method
-        
-        
-        # New method (Mirco Patriarca) applied to the 
-        # approximated functions: y.f.appr and y.g.appr  
-        # which uses prod.scal.1D function just defined
-        if (metodo.Mirco==1)
-        {
-          distance <- 0
+        distance <- 0
           for (l in 1:r.t)
           {
-            num <- prod.scal.1D(y.f.appr[1,,l],y.g.appr[1,,l])
-            den.f <- prod.scal.1D(y.f.appr[1,,l],y.f.appr[1,,l])
-            den.g <- prod.scal.1D(y.g.appr[1,,l],y.g.appr[1,,l])
-            distance <- distance + num/(sqrt(den.f*den.g))
+            distance <- distance + abs(sum(y.f.appr[1,,l]*y.g.appr[1,,l]))/(sqrt(sum(y.f.appr[1,,l]*y.f.appr[1,,l]))*sqrt(sum(y.g.appr[1,,l]*y.g.appr[1,,l])))
           }
           OUT <- distance/r.t
-        }
-        
-        # Old method (Simone Vantini) applied to the same 
-        # approximated functions than metodo.Mirco=1: 
-        # y.f.appr and y.g.appr  -> it gives same results
-        if (metodo.Mirco==2)
-        {
-          A <- cov(cbind(y.f.appr[1,,l],y.g.appr[1,,l]))+length(y.f.appr[1,,l])/(length(y.f.appr[1,,l])-1)*outer(c(mean(y.f.appr[1,,l]),mean(y.g.appr[1,,l])),c(mean(y.f.appr[1,,l]),mean(y.g.appr[1,,l])))
-          A[1,2] <- A[2,1] <- A[1,2]/sqrt(A[1,1]*A[2,2])
-          A[1,1] <- A[2,2] <- 1
-          OUT <- A[1,2]
-        }
-        
-        # Old method (Simone Vantini) applied to the 
-        # functions: y.f and y.g -> difference of 10^(-4)
-        if (metodo.Mirco==3)
-        {
-          A <- cov(cbind(y.f,y.g))+length(y.f)/(length(y.f)-1)*outer(c(mean(y.f),mean(y.g)),c(mean(y.f),mean(y.g)))
-          A[1,2] <- A[2,1] <- A[1,2]/sqrt(A[1,1]*A[2,2])
-          A[1,1] <- A[2,2] <- 1
-          OUT <- A[1,2]
-        }
-    
       }
-      
+        
       if (similarity.method=='d0.L2' || similarity.method=='d1.L2'
           || similarity.method=='d0.L2.centered' || similarity.method=='d1.L2.centered')
       {

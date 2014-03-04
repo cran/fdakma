@@ -9,7 +9,7 @@ function(
           optim.method = 'L-BFGS-B',
           span = 0.15, t.max = 0.1, m.max = 0.1, n.out = NULL,
           tol = 0.01, fence = TRUE, iter.max = 100, show.iter = 0, 
-          plot.graph = 0) 
+          plot.graph = 0, nstart=1, return.all=FALSE) 
 {
     
   ## Control length of n.clust different from 0
@@ -25,7 +25,11 @@ function(
       n.clust[ind] <- round(n.clust[ind])
     }
   }
-    
+  
+  if(return.all==TRUE)
+  {
+  	warning('return.all assigned to FALSE, only the best result in each case will be considered')
+  }  
   n.clust <- sort(n.clust)
 
   sim <- NULL
@@ -45,17 +49,14 @@ function(
     stop('warping.method does not contain any accepted values')  
   }
   
-  
   cycle <- NULL
   colors <- NULL
-#   if ('NOalignment' %in% warping.method) 
-#   {
-#     cycle <- c(cycle, 'NOalignment')
-#     colors <- c(colors,'black')
-#   }
   
-  cycle <- c(cycle, 'NOalignment')
-  colors <- c(colors,'black')
+  if ('NOalignment' %in% warping.method) 
+  {
+   	  cycle <- c(cycle, 'NOalignment')
+	  colors <- c(colors,'black')
+   }
   
   if ('shift' %in% warping.method) 
   {
@@ -76,22 +77,42 @@ function(
   if(length(dim(y0))!=0) {n.obs <- dim(y0)[1]}
   if(length(dim(y1))!=0) {n.obs <- dim(y1)[1]}
   
-  if (length(seeds)!=0) { seeds <- sort(seeds) }
   
-  if (length(seeds)==0)
+  # Controls if seeds has a feasible dimension
+  
+  if (is.null(seeds))
   {
-    # Random choice of seeds(=centers indexes) of first iteration
-    seeds <- sample(1:n.obs,max(n.clust))
-    seeds <- sort(seeds) 
+  	 seeds <- sample(1:n.obs,max(n.clust))
+  }
+
+  if (length(dim(seeds))==0)
+  {
+  	seeds <- as.matrix(t(seeds))
+  }
+  if (length(seeds[1,])>max(n.clust))
+  {
+    stop('number of columns of "seeds" must be inferior or equal to max(n.clust)')
   }
   
-  # Controls if seeds has the right dimension
-  if (length(seeds)!=max(n.clust))
+  if (dim(seeds)[2]>nstart)
   {
-    stop('length of "seeds" must be equal to max(n.clust)')
+  	warning('Number of row of seeds higher than nstart, only the first nstart rows of seeds will be considered')
+  	seeds <- seeds[1:nstart, ]
+  	 if (length(dim(seeds))==0)
+ 	 {
+  		seeds <- as.matrix(t(seeds))
+  	 }
   }
   
+  if (length(seeds[1,])<max(n.clust))
+  {
+  	seeds_2 <- matrix(NA, nrow=nstart, ncol=max(n.clust))
+  	seeds_2[1:dim(seeds)[1], 1:dim(seeds)[2]] <- seeds
+  	seeds_2[which(is.na(seeds_2))] <- sample(1:n.obs,length(which(is.na(seeds_2))))
+  	seeds <- seeds_2 
+  }	
   
+   
   # Controls if seeds has feasible values
   if (length(seeds)!=0)
   {
@@ -115,9 +136,6 @@ function(
            '"', optim.method.available[1], '"', ' ',
            '"', optim.method.available[2], '"'
       )
-      #            '"', optim.method.available[3], '"', ' ', 
-      #            '"', optim.method.available[4], '"', ' ',
-      #            '"', optim.method.available[5], '" (Brent is valid only with warping.method!="affine"')
     }
   }
   
@@ -133,15 +151,16 @@ function(
   {
     for(warping.method.tra in cycle)
     { 
-      Result <- kma (
+    	return.all <- FALSE
+      Result <- kma(
         x=x, y0=y0, y1=y1, n.clust = k, 
         warping.method = warping.method.tra, 
         similarity.method = similarity.method.compare,
         center.method = center.method,
-        seeds = seeds[1:k],
+        seeds = seeds[,1:k],
         optim.method = optim.method,
         span=span, t.max=t.max, m.max=m.max, n.out=n.out,
-        tol=tol, fence=fence, iter.max=iter.max, show.iter=show.iter) 
+        tol=tol, fence=fence, iter.max=iter.max, show.iter=show.iter, nstart=nstart, return.all=return.all) 
       
       if (warping.method.tra=='NOalignment') 
       {
@@ -205,8 +224,6 @@ function(
     boh <- 11 # number of points on the y-axes to be marked
     axis(2)
     axis(1,at=1:length(n.clust),labels=etichette,las=0)
-    #title('Mean similarity indexes VS Num.clusters 
-    #      (',center.method')')
     
     ba <- c('Mean similarity indexes VS Num.clusters', 
             paste('(center.method: ',center.method,')') )
@@ -215,6 +232,7 @@ function(
     leggenda <- cycle
     if (cycle[1]=='NOalignment') leggenda[1] <- 'without alignment'
     
+    # Differentiate the legend position because in the L2 case the similarity index will decrease
     if (similarity.method.compare=='d0.L2' 
         || similarity.method.compare=='d1.L2'
         || similarity.method.compare=='d0.L2.centered'

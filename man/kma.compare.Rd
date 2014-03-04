@@ -11,7 +11,8 @@ kma.compare(x, y0 = NULL, y1 = NULL, n.clust = c(1, 2),%
 warping.method = c("NOalignment", "shift", "dilation", "affine"),%
 similarity.method = "d1.pearson", center.method = "k-means", seeds = NULL,%
 optim.method = "L-BFGS-B", span = 0.15, t.max = 0.1, m.max = 0.1, n.out = NULL,%
-tol = 0.01, fence = TRUE, iter.max = 100, show.iter = 0, plot.graph = 0)
+tol = 0.01, fence = TRUE, iter.max = 100, show.iter = 0, plot.graph = 0,%
+ nstart=1, return.all=FALSE)
 }
 
 \arguments{
@@ -32,8 +33,8 @@ tol = 0.01, fence = TRUE, iter.max = 100, show.iter = 0, plot.graph = 0)
 
   \item{center.method}{character: type of clustering method to be used. Possible choices are: \code{'k-means'} and \code{'k-medoids'}. Default value is \code{'k-means'}.}
 
-  \item{seeds}{vector \emph{max(n.clust)}: indexes of the functions to be used as initial centers. Length of \code{seeds} must be equal to \emph{max(n.clust)}. If \code{seeds=NULL}, centers are randomly chosen among the \emph{n.func} original functions. Default value of \code{seeds} is \code{NULL}.
-}
+\item{seeds}{vector \emph{n.clust} or matrix \emph{nstart} X \emph{n.clust}: indexes of the functions to be used as initial centers. If it is a matrix, each row contains the indexes of the initial centers of one of the \code{nstart} initializations; if not all the values of \code{seeds} are provided, the ones not introduced are randomly chosen among the \emph{n.func} original functions. If \code{seeds=NULL} all the centers are randomly chosen. Default value of \code{seeds} is \code{NULL}.}
+
 
   \item{optim.method}{character: optimization method chosen to find the best warping functions at each iteration. Possible choices are: \code{'L-BFGS-B'} and \code{'SANN'}. See \link{optim} function for details. Default method is \code{'L-BFGS-B'}.
 }
@@ -57,17 +58,20 @@ tol = 0.01, fence = TRUE, iter.max = 100, show.iter = 0, plot.graph = 0)
   \item{plot.graph}{boolean:
   if \code{plot.graph=TRUE}, kma.compare plots a graphic with the means of similarity indexes as ordinate and the number of clusters as abscissa. Default value is \code{FALSE}.
 }
-
+  
+ \item{nstart}{scalar: number of initializations with different seeds. Default value is \code{1}}
+ 
+ \item{return.all}{boolean: if \code{return.all=TRUE} the results of all the \code{nstart} initailizations are returned; the output is a list of length \code{nstart}. If \code{return.all=FALSE} only the best result  is provided (the one with higher mean similarity if \code{similarity.method} is \code{'d0.pearson'} or \code{'d1.pearson'}, or the one with lower similarity if \code{similarity.method} is \code{'d0.L2'}, \code{'d1.L2'},  \code{'d0.L2.centered'} or \code{'d1.L2.centered'}). Default value is \code{FALSE}}
 }
 
 \details{
-Example of use: if \code{n.clust=c(1,2,3)} and \code{warping.method=c('shift','affine')}, kma.compare runs \link{kma} function with number of clusters equal to \code{1}, \code{2} and \code{3} using \code{warping.method='shift'} and \code{warping.method='affine'}. Note that the kma.compare function always runs with the required number of clusters and \code{warping.method='NOalignment'} as well, even if not specified by users.
+Example of use: if \code{n.clust=c(1,2,3)} and \code{warping.method=c('shift','affine')}, kma.compare runs \link{kma} function with number of clusters equal to \code{1}, \code{2} and \code{3} using \code{warping.method='shift'} and \code{warping.method='affine'}.
 }
   
 \value{
 The function output is a list containing the following elements:     
 
-  \item{Result.NOalignment}{list of outputs of \link{kma} function with \code{warping.type='NOalignment'}. The sublist \code{Result.NOalignment[[k]]} corresponds to the results when number of clusters is \code{n.clust[k]}.}
+  \item{Result.NOalignment}{list of outputs of \link{kma} function with \code{warping.type='NOalignment'}. The sublist \code{Result.NOalignment[[k]]} corresponds to the results when number of clusters is \code{n.clust[k]}. Note that if \code{'NOalignment'} is not chosen as \code{warping.type}, then \code{Result.NOalignment} will be \code{NULL}.}
   
   \item{Result.shift}{list of outputs of \link{kma} function with \code{warping.type='shift'}. The sublist \code{Result.shift[[k]]} corresponds to the results when number of clusters is \code{n.clust[k]}. Note that if \code{'shift'} is not chosen as \code{warping.type}, then \code{Result.shift} will be \code{NULL}.}
   

@@ -9,13 +9,13 @@ kma.show.results graphically shows the output results of \link{kma} function or 
 
 The function generates the following plots:%
 
-- \emph{d} plots of original functions (one for each of the \emph{d} dimensions of the input functions -for unidimensional functions \emph{d} is \code{1}-) with center (if \code{y0} is given as input in \link{kma}/\link{kma.compare} function).%
+- \eqn{d} plots of original functions (one for each of the \eqn{d} dimensions of the input functions -for unidimensional functions \eqn{d} is \code{1}-) with center (if \code{y0} is given as input in \link{kma}/\link{kma.compare} function).%
 
-- \emph{d} plots of aligned functions with centers (if \code{y0} is given as input in \link{kma}/\link{kma.compare} function).% 
+- \eqn{d} plots of aligned functions with centers (if \code{y0} is given as input in \link{kma}/\link{kma.compare} function).% 
 
-- \emph{d} plots of original function first derivatives with center (if \code{y1} is given as input and the chosen \code{similarity.method} concerns function first derivatives).% 
+- \eqn{d} plots of original function first derivatives with center (if \code{y1} is given as input and the chosen \code{similarity.method} concerns function first derivatives).% 
 
-- \emph{d} plot of aligned function first derivatives with centers (if \code{y1} is given as input and the chosen \code{similarity.method} concerns function first derivatives).%
+- \eqn{d} plots of aligned function first derivatives with centers (if \code{y1} is given as input and the chosen \code{similarity.method} concerns function first derivatives).%
 
 - Plot of warping functions.%
 
@@ -43,7 +43,7 @@ Sangalli, L.M., Secchi, P., Vantini, S., Vitelli, V., 2010. \emph{"K-mean alignm
 }
 
 \author{
-Mirco Patriarca, Laura Sangalli, Piercesare Secchi, Simone Vantini, Valeria Vitelli.
+Mirco Patriarca, Laura Sangalli, Piercesare Secchi, Simone Vantini, Valeria Vitelli, Alice Parodi.
 }
 
 \seealso{

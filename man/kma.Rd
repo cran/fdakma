@@ -10,7 +10,8 @@ To run kma function with different numbers of clusters and/or different alignmen
 kma(x, y0 = NULL, y1 = NULL, n.clust = 1, warping.method = "affine",%
 similarity.method = "d1.pearson", center.method = "k-means", seeds = NULL,%
 optim.method = "L-BFGS-B", span = 0.15, t.max = 0.1, m.max = 0.1, n.out = NULL,% 
-tol = 0.01, fence = TRUE, iter.max = 100, show.iter = 0, nstart=1, return.all=FALSE)
+tol = 0.01, fence = TRUE, iter.max = 100, show.iter = 0, nstart=2, return.all=FALSE,%
+check.total.similarity=FALSE)
 }
 
 \arguments{
@@ -29,8 +30,8 @@ tol = 0.01, fence = TRUE, iter.max = 100, show.iter = 0, nstart=1, return.all=FA
 
   \item{center.method}{character: type of clustering method to be used. Possible choices are: \code{'k-means'} and \code{'k-medoids'}. Default value is \code{'k-means'}.}
 
- \item{seeds}{vector \emph{max(n.clust) or matrix \emph{nstart} X \emph{n.clust}}: indexes of the functions to be used as initial centers. If it is a matrix, each row contains the indexes of the initial centers of one of the \code{nstart} initializations; if not all the values of \code{seeds} are provided, the ones not introduced are randomly chosen among the \code{n.func} original functions. If \code{seeds=NULL} all the centers are randomly chosen. Default value of \code{seeds} is \code{NULL}.
-}
+ \item{seeds}{vector \emph{max(n.clust)} or matrix \emph{nstart} X \emph{n.clust}: indexes of the functions to be used as initial centers. If it is a matrix, each row contains the indexes of the initial centers of one of the \code{nstart} initializations. In the case where not all the values of \code{seeds} are provided, those not provided are randomly chosen among the \code{n.func} original functions. If \code{seeds=NULL} all the centers are randomly chosen. Default value of \code{seeds} is \code{NULL}}.
+
 
   \item{optim.method}{character: optimization method chosen to find the best warping functions at each iteration. Possible choices are: \code{'L-BFGS-B'} and \code{'SANN'}. See \link{optim} function for details. Default method is \code{'L-BFGS-B'}.
 }
@@ -51,11 +52,11 @@ tol = 0.01, fence = TRUE, iter.max = 100, show.iter = 0, nstart=1, return.all=FA
   
   \item{show.iter}{boolean: if \code{show.iter=TRUE} kma shows the current iteration of the algorithm. Default value is \code{FALSE}.}
  
- \item{nstart}{scalar: number of initializations with different seeds. Default value is \code{1}.}
+ \item{nstart}{scalar: number of initializations with different seeds. Default value is \code{2}. This parameter is used only if \code{center.method} is \code{'k-medoids'}. When \code{center.method = 'k-means'} one initialization is performed.}
 	
-	\item{return.all}{boolean: if \code{return.all=TRUE} the results of all the \code{nstart} initializations are return; the output is a list of length \code{nstart}. If \code{return.all=FALSE} only the best result is provided (the one with higher mean similarity if \code{similarity.method} is \code{'d0.pearson'} or\code{'d1.pearson'}, or the one with lower similarity if \code{similarity.method} is \code{'d0.L2'}, \code{'d1.L2'}, \code{'d0.L2.centered'} or \code{'d1.L2.centered'}), Default value is \code{FALSE}.}
+	\item{return.all}{boolean: if \code{return.all=TRUE} the results of all the \code{nstart} initializations are returned; the output is a list of length \code{nstart}. If \code{return.all=FALSE} only the best result is provided (the one with higher mean similarity if \code{similarity.method} is \code{'d0.pearson'} or\code{'d1.pearson'}, or the one with lower distance if \code{similarity.method} is \code{'d0.L2'}, \code{'d1.L2'}, \code{'d0.L2.centered'} or \code{'d1.L2.centered'}). Default value is \code{FALSE}.}
 
-
+\item{check.total.similarity}{boolean: if \code{check.total.similarity=TRUE} at each iteration the algorithm checks if there is a decrease of the total similarity and stops. In the affermative case the result obtained in the penultimate iteration is returned. Default value is \code{FALSE}}
 }
 
 
@@ -110,12 +111,16 @@ The function output is a list containing the following elements:
 
 }
 
-\references{
-Sangalli, L.M., Secchi, P., Vantini, S., Vitelli, V., 2010. \emph{"K-mean alignment for curve clustering"}. Computational Statistics and Data Analysis, 54, 1219-1233.}
-
 \author{
-Mirco Patriarca, Laura Sangalli, Piercesare Secchi, Simone Vantini, Valeria Vitelli, Alice Parodi.
+Alice Parodi, Mirco Patriarca, Laura Sangalli, Piercesare Secchi, Simone Vantini, Valeria Vitelli.
 }
+
+\references{
+Sangalli, L.M., Secchi, P., Vantini, S., Vitelli, V., 2010. \emph{"K-mean alignment for curve clustering"}. Computational Statistics and Data Analysis, 54, 1219-1233.
+
+Sangalli, L.M., Secchi, P., Vantini, S., 2014. \emph{"Analysis of AneuRisk65 data: K-mean Alignment"}. Electronic Journal of Statistics, Special Section on "Statistics of Time Warpings and Phase Variations", Vol. 8, No. 2, 1891-1904.
+}
+
 
 \seealso{
   \code{\link{kma.compare}, \link{kma.similarity}, \link{fdakma}, \link{kma.data}, \link{kma.show.results} }

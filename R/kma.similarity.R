@@ -172,8 +172,8 @@ function (x.f = NULL, y0.f = NULL, y1.f = NULL, x.g = NULL, y0.g = NULL,
                 "d0.pearson") {
                 distance <- 0
                 for (l in 1:r.t) {
-                  distance <- distance + abs(sum(y.f.appr[1, 
-                    , l] * y.g.appr[1, , l]))/(sqrt(sum(y.f.appr[1, 
+                  distance <- distance + sum(y.f.appr[1, 
+                    , l] * y.g.appr[1, , l])/(sqrt(sum(y.f.appr[1, 
                     , l] * y.f.appr[1, , l])) * sqrt(sum(y.g.appr[1, 
                     , l] * y.g.appr[1, , l])))
                 }

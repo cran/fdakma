@@ -12,7 +12,7 @@ warping.method = c("NOalignment", "shift", "dilation", "affine"),%
 similarity.method = "d1.pearson", center.method = "k-means", seeds = NULL,%
 optim.method = "L-BFGS-B", span = 0.15, t.max = 0.1, m.max = 0.1, n.out = NULL,%
 tol = 0.01, fence = TRUE, iter.max = 100, show.iter = 0, plot.graph = 0, %
-nstart = 1, return.all = FALSE)
+nstart = 2, return.all = FALSE)
 }
 
 \arguments{
@@ -93,11 +93,15 @@ The function output is a list containing the following elements:
 }
 
 \references{
-Sangalli, L.M., Secchi, P., Vantini, S., Vitelli, V., 2010. \emph{"K-mean alignment for curve clustering"}. Computational Statistics and Data Analysis, 54, 1219-1233.}
+Sangalli, L.M., Secchi, P., Vantini, S., Vitelli, V., 2010. \emph{"K-mean alignment for curve clustering"}. Computational Statistics and Data Analysis, 54, 1219-1233.
+
+Sangalli, L.M., Secchi, P., Vantini, S., 2014. \emph{"Analysis of AneuRisk65 data: K-mean Alignment"}. Electronic Journal of Statistics, Special Section on "Statistics of Time Warpings and Phase Variations", Vol. 8, No. 2, 1891-1904.
+}
 
 \author{
-Mirco Patriarca, Laura Sangalli, Piercesare Secchi, Simone Vantini, Valeria Vitelli, Alice Parodi.
+Alice Parodi, Mirco Patriarca, Laura Sangalli, Piercesare Secchi, Simone Vantini, Valeria Vitelli.
 }
+
 
 \seealso{
   \code{\link{kma}, \link{kma.similarity}, \link{fdakma}, \link{kma.data}, \link{kma.show.results} }

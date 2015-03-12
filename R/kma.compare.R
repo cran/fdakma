@@ -4,7 +4,7 @@ function (x, y0 = NULL, y1 = NULL, n.clust = c(1, 2), warping.method = c("NOalig
     center.method = "k-means", seeds = NULL, optim.method = "L-BFGS-B", 
     span = 0.15, t.max = 0.1, m.max = 0.1, n.out = NULL, tol = 0.01, 
     fence = TRUE, iter.max = 100, show.iter = 0, plot.graph = 0, 
-    nstart = 1, return.all = FALSE) 
+    nstart = 2, return.all = FALSE) 
 {
     if (length(n.clust) == 0) {
         stop("length of n.clust must be positive")
@@ -68,7 +68,7 @@ function (x, y0 = NULL, y1 = NULL, n.clust = c(1, 2), warping.method = c("NOalig
     if (length(seeds[1, ]) > max(n.clust)) {
         stop("number of columns of \"seeds\" must be inferior or equal to max(n.clust)")
     }
-    if (dim(seeds)[2] > nstart) {
+    if (dim(seeds)[1] > nstart) {
         warning("Number of row of seeds higher than nstart, only the first nstart rows of seeds will be considered")
         seeds <- seeds[1:nstart, ]
         if (length(dim(seeds)) == 0) {

@@ -3,7 +3,7 @@ function (x, y0 = NULL, y1 = NULL, n.clust = 1, warping.method = "affine",
     similarity.method = "d1.pearson", center.method = "k-means", 
     seeds = NULL, optim.method = "L-BFGS-B", span = 0.15, t.max = 0.1, 
     m.max = 0.1, n.out = NULL, tol = 0.01, fence = TRUE, iter.max = 100, 
-    show.iter = 0, nstart = 1, return.all = FALSE) 
+    show.iter = 0, nstart = 2, return.all = FALSE, check.total.similarity=FALSE) 
 {
     n.clust.original <- n.clust
     y0.original <- y0
@@ -11,6 +11,14 @@ function (x, y0 = NULL, y1 = NULL, n.clust = 1, warping.method = "affine",
     similarity.method.original <- similarity.method
     similarity.method.available <- c("d1.pearson", "d0.L2", "d0.pearson", 
         "d1.L2", "d0.L2.centered", "d1.L2.centered")
+    if (center.method=="k-means")
+    {
+    		if (nstart!=2)
+    		{
+    			warning("The nstart parameter is used only if center.method = 'k-medoids'")
+    		}
+    	nstart <- 1
+    }
     if (!similarity.method %in% similarity.method.available) {
         stop("Value of \"similarity\" not valid. Possibles choices are: ", 
             "\"", similarity.method.available[1], "\"", " ", 
@@ -636,19 +644,13 @@ function (x, y0 = NULL, y1 = NULL, n.clust = 1, warping.method = "affine",
         }
         m.final.temp <- rep(1, n.obs)
         t.final.temp <- rep(0, n.obs)
-        still.in <- TRUE
         if (similarity.method == "d1.L2" || similarity.method == 
             "d0.L2" || similarity.method == "d1.L2.centered" || 
             similarity.method == "d0.L2.centered") {
             index.old <- rep(1, n.obs)
         }
-        while (((((sum((index - index.old) < tol) < n.obs) && 
-            (similarity.method == "d1.pearson" || similarity.method == 
-                "d0.pearson")) || ((sum((-index + index.old) < 
-            tol) < n.obs) && (similarity.method == "d1.L2" || 
-            similarity.method == "d0.L2" || similarity.method == 
-            "d1.L2.centered" || similarity.method == "d0.L2.centered"))) && 
-            still.in) && iter < iter.max) {
+        still.in=TRUE
+        while ((sum((index - index.old) < tol) < n.obs | sum(abs(labels - labels.old)) > 0) & iter < iter.max & still.in==TRUE) {
             labels.old <- labels
             index.old <- index
             if ((similarity.method == "d1.L2" || similarity.method == 
@@ -677,583 +679,631 @@ function (x, y0 = NULL, y1 = NULL, n.clust = 1, warping.method = "affine",
                 print(output.text3)
                 print("*********************************************")
             }
-            for (i in 1:n.obs) {
-                warping_temp <- matrix(-100, 2, length(templates))
-                index_temp <- NULL
-                for (k in 1:length(templates)) {
-                  if (reg) {
-                    if (only.shift == 1 && only.dilation == 0) {
-                      if (optim.method == "L-BFGS-B") {
-                        result <- optim(c(0), best_warping_only.shift, 
-                          method = optim.method, lower = lower.warp[2], 
-                          upper = upper.warp[2])
-                        if (result$convergence != 0) {
-                          result <- optim(c(0), best_warping_only.shift, 
-                            method = optim.method, control = list(parscale = 1e-15), 
-                            lower = lower.warp[2], upper = upper.warp[2])
-                        }
-                      }
-                      if (optim.method == "SANN") {
-                        f.sann <- function(x) {
-                          step2 <- runif(1, lower.warp[2], upper.warp[2])
-                          x <- step2
-                          return(x)
-                        }
-                        result <- optim(c(0), best_warping_only.shift, 
-                          gr = f.sann, method = optim.method)
-                      }
-                      warping_temp[2, k] <- result$par
-                      warping_temp[1, k] <- 1
-                    }
-                    if (only.dilation == 1 && only.shift == 0) {
-                      if (optim.method == "L-BFGS-B") {
-                        result <- optim(c(1), best_warping_only.dilation, 
-                          method = optim.method, lower = lower.warp[1], 
-                          upper = upper.warp[1])
-                        if (result$convergence != 0) {
-                          result <- optim(c(1), best_warping_only.dilation, 
-                            method = optim.method, control = list(parscale = 1e-15), 
-                            lower = lower.warp[2], upper = upper.warp[2])
-                        }
-                      }
-                      if (optim.method == "SANN") {
-                        f.sann <- function(x) {
-                          step1 <- runif(1, lower.warp[1], upper.warp[1])
-                          x <- step1
-                          return(x)
-                        }
-                        result <- optim(c(1), best_warping_only.dilation, 
-                          gr = f.sann, method = optim.method)
-                      }
-                      warping_temp[1, k] <- result$par
-                      warping_temp[2, k] <- 0
-                    }
-                    if (only.dilation == only.shift) {
-                      if (optim.method == "L-BFGS-B") {
-                        result <- optim(c(1, 0), best_warping, 
-                          method = optim.method, lower = lower.warp, 
-                          upper = upper.warp)
-                        if (result$convergence != 0) {
-                          result <- optim(c(1, 0), best_warping, 
-                            method = optim.method, control = list(parscale = c(1e-15, 
-                              1e-15)), lower = lower.warp[2], 
-                            upper = upper.warp[2])
-                        }
-                      }
-                      if (optim.method == "SANN") {
-                        f.sann <- function(x) {
-                          step1 <- runif(1, lower.warp[1], upper.warp[1])
-                          step2 <- runif(1, lower.warp[2], upper.warp[2])
-                          x <- c(step1, step2)
-                          return(x)
-                        }
-                        result <- optim(c(1, 0), best_warping, 
-                          gr = f.sann, method = optim.method)
-                      }
-                      warping_temp[, k] <- result$par
-                    }
-                    if (similarity.method == "d1.pearson" || 
-                      similarity.method == "d0.pearson") {
-                      index_temp <- c(index_temp, -result$value)
-                    }
-                    if (similarity.method == "d1.L2" || similarity.method == 
-                      "d0.L2" || similarity.method == "d1.L2.centered" || 
-                      similarity.method == "d0.L2.centered") {
-                      index_temp <- c(index_temp, +result$value)
-                    }
-                  }
-                  else {
-                    warping_temp[, k] <- c(1, 0)
-                    temp <- 0
-                    template.t <- templates[[k]][1, ]
-                    b <- !is.na(template.t)
-                    if (work.with.deriv.kma == 1) {
-                      data.t <- approx(x.reg[i, ], data1[i, , 
-                        1], xout = x.out)$y
-                    }
-                    if (work.with.deriv.kma == 0) {
-                      data.t <- approx(x.reg[i, ], data0[i, , 
-                        1], xout = x.out)$y
-                    }
-                    a <- !is.na(data.t)
-                    sel <- a & b
-                    data.t <- data.t[sel]
-                    template.t <- templates[[k]][, sel]
-                    x.out.temp <- x.out[sel]
-                    if (r > 1) {
-                      data_def <- data.t
-                      for (l in 2:r) {
-                        if (work.with.deriv.kma == 1) {
-                          data.t <- approx(x.reg[i, ], data1[i, 
-                            , l], xout = x.out)$y
-                        }
-                        if (work.with.deriv.kma == 0) {
-                          data.t <- approx(x.reg[i, ], data0[i, 
-                            , l], xout = x.out)$y
-                        }
-                        data.t <- data.t[sel]
-                        data_def <- rbind(data_def, data.t)
-                      }
-                      data.t <- data_def
-                    }
-                    x.out.temp <- x.out[sel]
-                    if (work.with.deriv.kma == 1) {
-                      temp <- temp + kma.similarity(x.f = x.out.temp, 
-                        y1.f = t(data.t), x.g = x.out.temp, y1.g = t(template.t), 
-                        similarity.method = similarity.method, 
-                        unif.grid = FALSE)
-                    }
-                    if (work.with.deriv.kma == 0) {
-                      temp <- temp + kma.similarity(x.f = x.out.temp, 
-                        y0.f = t(data.t), x.g = x.out.temp, y0.g = t(template.t), 
-                        similarity.method = similarity.method, 
-                        unif.grid = FALSE)
-                    }
-                    index_temp <- c(index_temp, temp)
-                  }
-                }
-                if (similarity.method == "d1.pearson" || similarity.method == 
-                  "d0.pearson") {
-                  index <- c(index, max(index_temp))
-                  labels[i] <- which.max(index_temp)
-                }
-                if (similarity.method == "d1.L2" || similarity.method == 
-                  "d0.L2" || similarity.method == "d1.L2.centered" || 
-                  similarity.method == "d0.L2.centered") {
-                  index <- c(index, min(index_temp))
-                  labels[i] <- which.min(index_temp)
-                }
-                meigs <- c(meigs, warping_temp[1, labels[i]])
-                teigs <- c(teigs, warping_temp[2, labels[i]])
+                
+             
+             for(i in 1:n.obs){
+      
+      warping_temp <- matrix(-100,2,length(templates))
+      index_temp <- NULL
+      
+      for(k in 1:length(templates)){        
+        
+        if(reg)
+        {
+          # Optimization step
+          
+          # shift
+          if (only.shift==1 && only.dilation==0)
+          {
+            if (optim.method=='L-BFGS-B')
+            {
+              result <- optim(c(0), best_warping_only.shift, method=optim.method, lower = lower.warp[2], upper = upper.warp[2])
             }
-            if (((sum(index) - sum(index.old)) > 0 && (similarity.method == 
-                "d1.pearson" || similarity.method == "d0.pearson")) || 
-                ((sum(index) - sum(index.old)) < 0 && (similarity.method == 
-                  "d1.L2" || similarity.method == "d0.L2" || 
-                  similarity.method == "d1.L2.centered" || similarity.method == 
-                  "d0.L2.centered")) || (center.method == "k-means" && 
-                iter == 2) || iter == 1) {
-                if (fence == TRUE) {
-                  if (iter == 1) {
-                    limitewhile <- 1
-                  }
-                  else {
-                    limitewhile <- lim.while
-                  }
-                  if (reg) {
-                    contatorewhile <- 1
-                    for (k in unique(labels)) {
-                      data.selec <- which(labels == k)
-                      meigs[data.selec] <- meigs[data.selec]/mean(meigs[data.selec])
-                      teigs[data.selec] <- (teigs[data.selec] - 
-                        mean(teigs[data.selec]))/mean(meigs[data.selec])
-                    }
-                    B1.meigs <- B2.meigs <- B1.teigs <- B2.teigs <- NULL
-                    Q3.meigs <- summary(meigs)[5]
-                    Q1.meigs <- summary(meigs)[2]
-                    Q3.teigs <- summary(teigs)[5]
-                    Q1.teigs <- summary(teigs)[2]
-                    B1.meigs <- Q1.meigs - coeff.cheb.locale * 
-                      (Q3.meigs - Q1.meigs)
-                    B2.meigs <- Q3.meigs + coeff.cheb.locale * 
-                      (Q3.meigs - Q1.meigs)
-                    B1.teigs <- Q1.teigs - coeff.cheb.locale * 
-                      (Q3.teigs - Q1.teigs)
-                    B2.teigs <- Q3.teigs + coeff.cheb.locale * 
-                      (Q3.teigs - Q1.teigs)
-                    if (only.shift == 1 && only.dilation == 0) {
-                      ind.out.it <- which((teigs > B2.teigs) | 
-                        (teigs < B1.teigs))
-                    }
-                    if (only.dilation == 1 && only.shift == 0) {
-                      ind.out.it <- which((meigs > B2.meigs) | 
-                        (meigs < B1.meigs))
-                    }
-                    if (only.shift == only.dilation) {
-                      ind.out.it <- which((meigs > B2.meigs) | 
-                        (meigs < B1.meigs) | (teigs > B2.teigs) | 
-                        (teigs < B1.teigs))
-                    }
-                    ind.out.temp <- NULL
-                    contatoreloop <- 0
-                    ind.out.OLD <- n.obs + 1
-                    while (contatorewhile <= limitewhile) {
-                      m.list.temp <- m.list
-                      t.list.temp <- t.list
-                      m.list.temp <- c(m.list.temp, list(meigs))
-                      t.list.temp <- c(t.list.temp, list(teigs))
-                      if (iter > 1) {
-                        m.final.temp <- rep(1, n.obs)
-                        t.final.temp <- rep(0, n.obs)
-                        for (h in 1:(iter)) {
-                          m.final.temp <- m.final.temp * m.list.temp[[h]]
-                          t.final.temp <- t.final.temp * m.list.temp[[h]] + 
-                            t.list.temp[[h]]
-                        }
-                        for (k in 1:n.clust) {
-                          data.selec <- which(labels == k)
-                          m.final.temp[data.selec] <- m.final.temp[data.selec]/mean(m.final.temp[data.selec])
-                          t.final.temp[data.selec] <- (t.final.temp[data.selec] - 
-                            mean(t.final.temp[data.selec]))/mean(m.final.temp[data.selec])
-                        }
-                        Q3.m.final.temp <- summary(m.final.temp)[5]
-                        Q1.m.final.temp <- summary(m.final.temp)[2]
-                        Q3.t.final.temp <- summary(t.final.temp)[5]
-                        Q1.t.final.temp <- summary(t.final.temp)[2]
-                        B1.m.final.temp <- Q1.m.final.temp - 
-                          coeff.cheb.globale * (Q3.m.final.temp - 
-                            Q1.m.final.temp)
-                        B2.m.final.temp <- Q3.m.final.temp + 
-                          coeff.cheb.globale * (Q3.m.final.temp - 
-                            Q1.m.final.temp)
-                        B1.t.final.temp <- Q1.t.final.temp - 
-                          coeff.cheb.globale * (Q3.t.final.temp - 
-                            Q1.t.final.temp)
-                        B2.t.final.temp <- Q3.t.final.temp + 
-                          coeff.cheb.globale * (Q3.t.final.temp - 
-                            Q1.t.final.temp)
-                        if (only.shift == 1 && only.dilation == 
-                          0) {
-                          ind.out.temp <- which((t.final.temp > 
-                            B2.t.final.temp) | (t.final.temp < 
-                            B1.t.final.temp))
-                        }
-                        if (only.dilation == 1 && only.shift == 
-                          0) {
-                          ind.out.temp <- which((m.final.temp > 
-                            B2.m.final.temp) | (m.final.temp < 
-                            B1.m.final.temp))
-                        }
-                        if (only.shift == only.dilation) {
-                          ind.out.temp <- which((m.final.temp > 
-                            B2.m.final.temp) | (m.final.temp < 
-                            B1.m.final.temp) | (t.final.temp > 
-                            B2.t.final.temp) | (t.final.temp < 
-                            B1.t.final.temp))
-                        }
-                      }
-                      else {
-                        B1.m.final.temp <- B1.meigs
-                        B2.m.final.temp <- B2.meigs
-                        B1.t.final.temp <- B1.teigs
-                        B2.t.final.temp <- B2.teigs
-                        ind.out.temp <- ind.out.it
-                      }
-                      if (contatorewhile > 1) {
-                        ind.out <- sort(ind.out.temp)
-                      }
-                      else {
-                        ind.out <- sort(unique(c(ind.out.it, 
-                          ind.out.temp)))
-                      }
-                      if (length(ind.out) == 0) 
-                        break
-                      if (isTRUE(all.equal(ind.out, ind.out.OLD))) {
-                        contatoreloop <- contatoreloop + 1
-                      }
-                      if (contatoreloop == count.loop) 
-                        break
-                      ind.out.OLD <- ind.out
-                      contatorewhile <- contatorewhile + 1
-                      lwn <- matrix(NA, length(ind.out), 2)
-                      uwn <- matrix(NA, length(ind.out), 2)
-                      if (iter == 1) {
-                        lwn[, 1] <- rep(B1.meigs, length(ind.out))
-                        uwn[, 1] <- rep(B2.meigs, length(ind.out))
-                        lwn[, 2] <- rep(B1.teigs, length(ind.out))
-                        uwn[, 2] <- rep(B2.teigs, length(ind.out))
-                      }
-                      if (iter > 1) {
-                        i.seq <- 0
-                        for (gh in ind.out) {
-                          i.seq = i.seq + 1
-                          lwn[i.seq, 1] <- B1.m.final.temp/(m.final.temp[gh]/meigs[gh])
-                          uwn[i.seq, 1] <- B2.m.final.temp/(m.final.temp[gh]/meigs[gh])
-                          lwn[i.seq, 2] <- B1.t.final.temp - 
-                            (t.final.temp[gh] - teigs[gh])
-                          uwn[i.seq, 2] <- B2.t.final.temp - 
-                            (t.final.temp[gh] - teigs[gh])
-                        }
-                      }
-                      i.seq <- 0
-                      for (i in ind.out) {
-                        i.seq = i.seq + 1
-                        warping_temp <- matrix(-100, 2, length(templates))
-                        index_temp <- NULL
-                        flag1 <- NULL
-                        if (only.shift == 1 && only.dilation == 
-                          0) {
-                          flag1 <- (uwn[i.seq, 2] < B1.teigs) | 
-                            (lwn[i.seq, 2] > B2.teigs)
-                        }
-                        if (only.shift == 0 && only.dilation == 
-                          1) {
-                          flag1 <- (uwn[i.seq, 1] < B1.meigs) | 
-                            (lwn[i.seq, 1] > B2.meigs)
-                        }
-                        if (only.shift == only.dilation) {
-                          flag1 <- (uwn[i.seq, 1] < B1.meigs) | 
-                            (lwn[i.seq, 1] > B2.meigs) | (uwn[i.seq, 
-                            2] < B1.teigs) | (lwn[i.seq, 2] > 
-                            B2.teigs)
-                        }
-                        if (flag1) {
-                          flagglobale <- flagglobale + 1
-                          lower.warp.new <- c(lwn[i.seq, 1] - 
-                            10^(-4), lwn[i.seq, 2] - 10^(-4))
-                          upper.warp.new <- c(uwn[i.seq, 1] + 
-                            10^(-4), uwn[i.seq, 2] + 10^(-4))
-                        }
-                        if (flag1 == FALSE) {
-                          lower.warp.new <- c((max(B1.meigs, 
-                            lwn[i.seq, 1]) - 10^(-4)), (max(B1.teigs, 
-                            lwn[i.seq, 2]) - 10^(-4)))
-                          upper.warp.new <- c((min(B2.meigs, 
-                            uwn[i.seq, 1]) + 10^(-4)), (min(B2.teigs, 
-                            uwn[i.seq, 2]) + 10^(-4)))
-                        }
-                        for (k in 1:length(templates)) {
-                          init1 <- mean(upper.warp.new[1], lower.warp.new[1])
-                          init2 <- mean(upper.warp.new[2], lower.warp.new[2])
-                          if ((lower.warp.new[1] <= 1) && (upper.warp.new[1] >= 
-                            1)) {
-                            init1 <- 1
-                          }
-                          if ((lower.warp.new[2] <= 0) && (upper.warp.new[2] >= 
-                            0)) {
-                            init2 <- 0
-                          }
-                          if (only.shift == 1 && only.dilation == 
-                            0) {
-                            if (optim.method == "L-BFGS-B") {
-                              result <- optim(c(init2), best_warping_only.shift, 
-                                method = optim.method, lower = lower.warp.new[2], 
-                                upper = upper.warp.new[2])
-                              if (result$convergence != 0) {
-                                result <- optim(c(init2), best_warping_only.shift, 
-                                  method = optim.method, control = list(parscale = 1e-15), 
-                                  lower = lower.warp[2], upper = upper.warp[2])
-                              }
-                            }
-                            if (optim.method == "SANN") {
-                              f.sann <- function(x) {
-                                step2 <- runif(1, lower.warp.new[2], 
-                                  upper.warp.new[2])
-                                x <- c(step2)
-                                return(x)
-                              }
-                              result <- optim(c(init2), best_warping_only.shift, 
-                                gr = f.sann, method = optim.method)
-                            }
-                            warping_temp[2, k] <- result$par
-                            warping_temp[1, k] <- 1
-                          }
-                          if (only.dilation == 1 && only.shift == 
-                            0) {
-                            if (optim.method == "L-BFGS-B") {
-                              result <- optim(c(init1), best_warping_only.dilation, 
-                                method = optim.method, lower = lower.warp.new[1], 
-                                upper = upper.warp.new[1])
-                              if (result$convergence != 0) {
-                                result <- optim(c(init1), best_warping_only.dilation, 
-                                  method = optim.method, control = list(parscale = 1e-15), 
-                                  lower = lower.warp[2], upper = upper.warp[2])
-                              }
-                            }
-                            if (optim.method == "SANN") {
-                              f.sann <- function(x) {
-                                step1 <- runif(1, lower.warp.new[1], 
-                                  upper.warp.new[1])
-                                x <- c(step1)
-                                return(x)
-                              }
-                              result <- optim(c(init1), best_warping_only.dilation, 
-                                gr = f.sann, method = optim.method)
-                            }
-                            warping_temp[1, k] <- result$par
-                            warping_temp[2, k] <- 0
-                          }
-                          if (only.dilation == only.shift) {
-                            if (optim.method == "L-BFGS-B") {
-                              result <- optim(c(init1, init2), 
-                                best_warping, method = optim.method, 
-                                lower = lower.warp.new, upper = upper.warp.new)
-                              if (result$convergence != 0) {
-                                result <- optim(c(init1, init2), 
-                                  best_warping, method = optim.method, 
-                                  control = list(parscale = c(1e-15, 
-                                    1e-15)), lower = lower.warp[2], 
-                                  upper = upper.warp[2])
-                              }
-                            }
-                            if (optim.method == "SANN") {
-                              f.sann <- function(x) {
-                                step1 <- runif(1, lower.warp.new[1], 
-                                  upper.warp.new[1])
-                                step2 <- runif(1, lower.warp.new[2], 
-                                  upper.warp.new[2])
-                                x <- c(step1, step2)
-                                return(x)
-                              }
-                              result <- optim(c(init1, init2), 
-                                best_warping, gr = f.sann, method = optim.method)
-                            }
-                            warping_temp[, k] <- result$par
-                          }
-                          if (similarity.method == "d1.pearson" || 
-                            similarity.method == "d0.pearson") {
-                            index_temp <- c(index_temp, -result$value)
-                          }
-                          if (similarity.method == "d1.L2" || 
-                            similarity.method == "d0.L2" || similarity.method == 
-                            "d1.L2.centered" || similarity.method == 
-                            "d0.L2.centered") {
-                            index_temp <- c(index_temp, +result$value)
-                          }
-                        }
-                        if (similarity.method == "d1.pearson" || 
-                          similarity.method == "d0.pearson") {
-                          index[i] <- max(index_temp)
-                          labels[i] <- which.max(index_temp)
-                        }
-                        if (similarity.method == "d1.L2" || similarity.method == 
-                          "d0.L2" || similarity.method == "d1.L2.centered" || 
-                          similarity.method == "d0.L2.centered") {
-                          index[i] <- min(index_temp)
-                          labels[i] <- which.min(index_temp)
-                        }
-                        meigs[i] <- warping_temp[1, labels[i]]
-                        teigs[i] <- warping_temp[2, labels[i]]
-                      }
-                      for (k in unique(labels)) {
-                        data.selec <- which(labels == k)
-                        meigs[data.selec] <- meigs[data.selec]/mean(meigs[data.selec])
-                        teigs[data.selec] <- (teigs[data.selec] - 
-                          mean(teigs[data.selec]))/mean(meigs[data.selec])
-                      }
-                    }
-                  }
-                }
-                for (i in 1:n.obs) {
-                  x.reg[i, ] <- meigs[i] * x.reg[i, ] + teigs[i]
-                }
-                m.list <- c(m.list, list(meigs))
-                t.list <- c(t.list, list(teigs))
-                m.list.temp <- NULL
-                t.list.temp <- NULL
-                m.list.temp <- m.list
-                t.list.temp <- t.list
-                x.out <- seq(min(x.reg, na.rm = TRUE), max(x.reg, 
-                  na.rm = TRUE), length = n.out)
-                if (center.method == "k-means") {
-                  templates <- NULL
-                  for (k in sort(unique(labels))) {
-                    data.selec <- which(labels == k)
-                    y0 <- NULL
-                    for (l in 1:r) {
-                      if (work.with.deriv.kma == 1) {
-                        temp <- loess(as.numeric(data1[data.selec, 
-                          , l]) ~ as.numeric(x.reg[data.selec, 
-                          ]), span = span)
-                      }
-                      if (work.with.deriv.kma == 0) {
-                        temp <- loess(as.numeric(data0[data.selec, 
-                          , l]) ~ as.numeric(x.reg[data.selec, 
-                          ]), span = span)
-                      }
-                      temp <- predict(temp, x.out)
-                      y0 <- rbind(y0, temp)
-                    }
-                    templates <- c(templates, list(y0))
-                  }
-                }
-                if (center.method == "k-medoids") {
-                  x.com <- seq(max(x.reg[, 1], na.rm = T), min(x.reg[, 
-                    dim(x.reg)[2]], na.rm = T), length = n.out)
-                  data0.reg <- array(0, dim = c(n.obs, n.out, 
-                    r))
-                  data1.reg <- array(0, dim = c(n.obs, n.out, 
-                    r))
-                  for (l in 1:r) {
-                    for (k in 1:n.obs) {
-                      if (similarity.method == "d1.L2" || similarity.method == 
-                        "d1.pearson" || similarity.method == 
-                        "d1.L2.centered" || similarity.method == 
-                        "d1.pearson.mean") {
-                        data1.reg[k, , l] <- approx(x.reg[k, 
-                          ], data1[k, , l], xout = x.com)$y
-                      }
-                      if (similarity.method == "d0.L2" || similarity.method == 
-                        "d0.pearson" || similarity.method == 
-                        "d0.L2.centered" || similarity.method == 
-                        "d0.pearson.mean") {
-                        data0.reg[k, , l] <- approx(x.reg[k, 
-                          ], data0[k, , l], xout = x.com)$y
-                      }
-                    }
-                  }
-                  templates <- NULL
-                  for (k in sort(unique(labels))) {
-                    data.selec <- which(labels == k)
-                    y0 <- NULL
-                    distanze <- rep(0, length(data.selec))
-                    for (i in 1:length(data.selec)) {
-                      for (j in 1:length(data.selec)) {
-                        if (work.with.deriv.kma == 1) {
-                          b <- !is.na(data1.reg[i, , 1])
-                          a <- !is.na(data1.reg[j, , 1])
-                          sel <- a & b
-                          distanze[i] <- distanze[i] + kma.similarity(x.f = x.com[sel], 
-                            y1.f = data1.reg[i, sel, ], x.g = x.com[sel], 
-                            y1.g = data1.reg[j, sel, ], similarity.method = similarity.method, 
-                            unif.grid = FALSE)
-                        }
-                        if (work.with.deriv.kma == 0) {
-                          b <- !is.na(data0.reg[i, , 1])
-                          a <- !is.na(data0.reg[j, , 1])
-                          sel <- a & b
-                          distanze[i] <- distanze[i] + kma.similarity(x.f = x.com[sel], 
-                            y0.f = data0.reg[i, sel, ], x.g = x.com[sel], 
-                            y0.g = data0.reg[j, sel, ], similarity.method = similarity.method, 
-                            unif.grid = FALSE)
-                        }
-                      }
-                    }
-                    if (similarity.method == "d1.L2" || similarity.method == 
-                      "d0.L2" || similarity.method == "d1.L2.centered" || 
-                      similarity.method == "d0.L2.centered") {
-                      m <- which.min(distanze)
-                    }
-                    if (similarity.method == "d1.pearson" || 
-                      similarity.method == "d0.pearson") {
-                      m <- which.max(distanze)
-                    }
-                    for (l in 1:r) {
-                      if (work.with.deriv.kma == 1) {
-                        temp <- approx(x.reg[data.selec[m], ], 
-                          data1[data.selec[m], , l], xout = x.out)$y
-                      }
-                      if (work.with.deriv.kma == 0) {
-                        temp <- approx(x.reg[data.selec[m], ], 
-                          data0[data.selec[m], , l], xout = x.out)$y
-                      }
-                      y0 <- rbind(y0, temp)
-                    }
-                    templates <- c(templates, list(y0))
-                  }
-                }
+            if (optim.method=='SANN')
+            {
+              f.sann <- function(x){
+                #step1 <- runif(1, lower.warp[1], upper.warp[1])
+                step2 <- runif(1, lower.warp[2], upper.warp[2])
+                x <- step2
+                return(x)
+              }
+              result <- optim(c(0), best_warping_only.shift, gr=f.sann, method=optim.method)
             }
-            else {
-                index <- index.old
-                labels <- labels.old
-                templates <- templates.old
-                iter <- iter - 1
-                still.in <- FALSE
-                warning("The algorithm stops because the last iteration is associated to  a decrease of the total similarity; the results provided are associated to the second to last iteration.")
+            
+            warping_temp[2,k] <- result$par
+            warping_temp[1,k] <- 1
+          }
+          
+          # dilation
+          if (only.dilation==1 && only.shift==0) 
+          {
+            if (optim.method=='L-BFGS-B')
+            {
+              result <- optim(c(1), best_warping_only.dilation, method=optim.method, lower = lower.warp[1], upper = upper.warp[1])
+            } 
+            if (optim.method=='SANN')
+            {
+              f.sann <- function(x){
+                step1 <- runif(1, lower.warp[1], upper.warp[1])
+                #step2 <- runif(1, lower.warp[2], upper.warp[2])
+                x <- step1
+                return(x)
+              }
+              result <- optim(c(1), best_warping_only.dilation, gr=f.sann, method=optim.method)
             }
+            
+            warping_temp[1,k] <- result$par
+            warping_temp[2,k] <- 0
+          }
+          
+          # affine
+          if (only.dilation==only.shift) 
+          {
+            if (optim.method=='L-BFGS-B')
+            { 
+              result <- optim(c(1,0), best_warping, method=optim.method, lower = lower.warp, upper = upper.warp)
+            }
+            if (optim.method=='SANN')
+            {
+              f.sann <- function(x){
+                step1 <- runif(1, lower.warp[1], upper.warp[1])
+                step2 <- runif(1, lower.warp[2], upper.warp[2])
+                x <- c(step1,step2)
+                return(x)
+              }
+              result <- optim(c(1,0), best_warping, gr=f.sann, method=optim.method)
+            }
+            
+            warping_temp[,k] <- result$par
+          }
+          
+          #print(paste('FINITO CON LA CURVA i: ',i))
+          
+          if(similarity.method == 'd1.pearson' 
+             || similarity.method == 'd0.pearson'
+          ) 
+          {index_temp <- c(index_temp, -result$value)}
+          
+          if(similarity.method == 'd1.L2' 
+             || similarity.method == 'd0.L2'
+             || similarity.method == 'd1.L2.centered'
+             || similarity.method == 'd0.L2.centered'
+          ) 
+          {index_temp <- c(index_temp, +result$value)}
+
+        }else{
+          
+          warping_temp[,k] <- c(1,0)
+          temp <- 0
+          for(l in 1:r){
+            
+            if (work.with.deriv.kma==1)
+            {data.t <- approx(x.reg[i,], data1[i,,l], xout=x.out)$y}
+            
+            if (work.with.deriv.kma==0)
+            {data.t <- approx(x.reg[i,], data0[i,,l], xout=x.out)$y}
+            
+            a <- !is.na(data.t)    
+            template.t <- templates[[k]][l,]
+            b <- !is.na(template.t)
+            sel <- a&b
+            data.t <- data.t[sel]       
+            template.t <- template.t[sel]
+            
+            x.out.temp <- x.out[sel]
+            #temp <- temp + kma.similarity(data.t,template.t,similarity.method)
+            
+            if (work.with.deriv.kma==1)
+            {
+              temp <- temp + kma.similarity(
+                x.f = x.out.temp, y1.f = data.t,
+                x.g = x.out.temp, y1.g = template.t,
+                similarity.method = similarity.method, unif.grid = FALSE)   
+            }
+            
+            if (work.with.deriv.kma==0)
+            {
+              temp <- temp + kma.similarity(
+                x.f = x.out.temp, y0.f = data.t,
+                x.g = x.out.temp, y0.g = template.t,
+                similarity.method = similarity.method, unif.grid = FALSE)   
+            }
+            
+          }
+          index_temp <- c(index_temp, temp/r)
+          
         }
-        if (iter == iter.max) 
-            warning("reached maximum number of iterations, method stops")
+        
+      }# end cycle on the clusters
+            
+      if(similarity.method == 'd1.pearson' 
+         || similarity.method == 'd0.pearson') 
+      {
+        # similarity index
+        index  <- c(index,  max(index_temp))
+        # cluster label
+        labels[i] <- which.max(index_temp)
+      }
+      if(similarity.method == 'd1.L2' 
+         || similarity.method == 'd0.L2'
+         || similarity.method == 'd1.L2.centered'
+         || similarity.method == 'd0.L2.centered'
+      ) 
+      {
+        # similarity index
+        index  <- c(index,  min(index_temp))
+        # cluster label
+        labels[i] <- which.min(index_temp)
+      }
+      
+      # optimal warping function shift and dilation
+      meigs <- c(meigs, warping_temp[1,labels[i]])
+      teigs <- c(teigs, warping_temp[2,labels[i]])
+      
+    }# end cycle on the curves
+    
+    #print('end cycle on the curves')
+    
+    if (fence==TRUE)
+    {
+      #####################       FENCE       ######################################
+      if (iter==1) {limitewhile <- 1} else {limitewhile <- lim.while}
+      
+      if(reg){
+        
+        contatorewhile <- 1
+        
+        # Normalize shifts and dilations
+        for(k in unique(labels)){
+          
+          data.selec <- which(labels==k)
+          meigs[data.selec] <- meigs[data.selec]/mean(meigs[data.selec])
+          teigs[data.selec] <- (teigs[data.selec] - mean(teigs[data.selec]))/mean(meigs[data.selec])
+          
+        }
+        
+        B1.meigs <- B2.meigs <- B1.teigs <- B2.teigs <- NULL
+        
+        ########################   CALCOLO BOUNDS ITERAZIONE     ########################
+        Q3.meigs <- summary(meigs)[5] # third quartile
+        Q1.meigs <- summary(meigs)[2] # first quartile
+        Q3.teigs <- summary(teigs)[5] # third quartile
+        Q1.teigs <- summary(teigs)[2] # first quartile
+        B1.meigs <- Q1.meigs - coeff.cheb.locale*(Q3.meigs -Q1.meigs)
+        B2.meigs <- Q3.meigs + coeff.cheb.locale*(Q3.meigs -Q1.meigs)
+        B1.teigs <- Q1.teigs - coeff.cheb.locale*(Q3.teigs -Q1.teigs)
+        B2.teigs <- Q3.teigs + coeff.cheb.locale*(Q3.teigs -Q1.teigs)
+        
+        #       B1.meigs <- mean(meigs) - coeff.cheb.locale*sd(meigs)
+        #       B2.meigs <- mean(meigs) + coeff.cheb.locale*sd(meigs)
+        #       B1.teigs <- mean(teigs) - coeff.cheb.locale*sd(teigs)
+        #       B2.teigs <- mean(teigs) + coeff.cheb.locale*sd(teigs)
+        
+        if (only.shift==1 && only.dilation==0) { ind.out.it <- which( (teigs > B2.teigs) | (teigs < B1.teigs) ) }
+        if (only.dilation==1 && only.shift==0) { ind.out.it <- which( (meigs > B2.meigs) | (meigs < B1.meigs) ) }
+        if ( only.shift == only.dilation )
+        {
+          ind.out.it <- which( (meigs > B2.meigs) | (meigs < B1.meigs) | (teigs > B2.teigs) | (teigs < B1.teigs) )
+        }
+        
+        ########################    CALCOLO BOUNDS GLOBALI       ########################
+        ind.out.temp <- NULL     
+        contatoreloop <- 0
+        ind.out.OLD <- n.obs + 1
+        
+        while (contatorewhile <= limitewhile) # limitewhile=3
+        {
+          m.list.temp <- m.list
+          t.list.temp <- t.list
+          m.list.temp <- c(m.list.temp,list(meigs))
+          t.list.temp <- c(t.list.temp,list(teigs))
+          
+          if (iter > 1)
+          {
+            # calcolo shift e dilat globali
+            m.final.temp <- rep(1,n.obs)
+            t.final.temp <- rep(0,n.obs)
+            
+            for(h in 1:(iter)){
+              m.final.temp <- m.final.temp*m.list.temp[[h]]
+              t.final.temp <- t.final.temp*m.list.temp[[h]] + t.list.temp[[h]]
+            }
+            ## NORMALIZE FINAL.TEMP
+            for(k in 1:n.clust){
+              data.selec <- which(labels==k)
+              m.final.temp[data.selec] <- m.final.temp[data.selec]/mean(m.final.temp[data.selec])
+              t.final.temp[data.selec] <- (t.final.temp[data.selec] - mean(t.final.temp[data.selec]))/mean(m.final.temp[data.selec])
+            }
+            
+            # Calcolo Q1 e Q3 globali
+            Q3.m.final.temp <- summary(m.final.temp)[5] # third quartile
+            Q1.m.final.temp <- summary(m.final.temp)[2] # first quartile
+            Q3.t.final.temp <- summary(t.final.temp)[5] # third quartile
+            Q1.t.final.temp <- summary(t.final.temp)[2] # first quartile
+            
+            B1.m.final.temp <- Q1.m.final.temp - coeff.cheb.globale*(Q3.m.final.temp - Q1.m.final.temp)
+            B2.m.final.temp <- Q3.m.final.temp + coeff.cheb.globale*(Q3.m.final.temp - Q1.m.final.temp)
+            B1.t.final.temp <- Q1.t.final.temp - coeff.cheb.globale*(Q3.t.final.temp - Q1.t.final.temp)
+            B2.t.final.temp <- Q3.t.final.temp + coeff.cheb.globale*(Q3.t.final.temp - Q1.t.final.temp)
+            
+            #         B1.m.final.temp <- mean(m.final.temp) - coeff.cheb.globale*sd(m.final.temp)
+            #         B2.m.final.temp <- mean(m.final.temp) + coeff.cheb.globale*sd(m.final.temp)
+            #         B1.t.final.temp <- mean(t.final.temp) - coeff.cheb.globale*sd(t.final.temp)
+            #         B2.t.final.temp <- mean(t.final.temp) + coeff.cheb.globale*sd(t.final.temp)
+            
+            if (only.shift == 1 && only.dilation==0) { ind.out.temp <- which( (t.final.temp > B2.t.final.temp) | (t.final.temp < B1.t.final.temp) ) }
+            if (only.dilation == 1 && only.shift==0) { ind.out.temp <- which( (m.final.temp > B2.m.final.temp) | (m.final.temp < B1.m.final.temp) ) }
+            if ( only.shift == only.dilation ) 
+            {
+              ind.out.temp <- which( (m.final.temp > B2.m.final.temp) | (m.final.temp < B1.m.final.temp) | (t.final.temp > B2.t.final.temp) | (t.final.temp < B1.t.final.temp) )
+            }
+          }
+          else {
+            B1.m.final.temp <- B1.meigs
+            B2.m.final.temp <- B2.meigs
+            B1.t.final.temp <- B1.teigs
+            B2.t.final.temp <- B2.teigs
+            ind.out.temp <- ind.out.it
+          }
+          # FINE CALCOLO BOUNDS GLOBALI
+          
+          if (contatorewhile > 1) { ind.out <- sort(ind.out.temp); }
+          else { ind.out <- sort ( unique (c( ind.out.it, ind.out.temp) ) ) }
+          if (length(ind.out)==0) break;
+          if ( isTRUE(all.equal(ind.out, ind.out.OLD)) ) {contatoreloop <- contatoreloop + 1}
+          if (contatoreloop == count.loop) break;
+          ind.out.OLD <- ind.out
+          contatorewhile <- contatorewhile +1
+          
+          lwn <- matrix(NA,length(ind.out),2)
+          uwn <- matrix(NA,length(ind.out),2)
+          
+          if (iter==1) 
+          {
+            lwn[,1] <- rep(B1.meigs,length(ind.out))
+            uwn[,1] <- rep(B2.meigs,length(ind.out))
+            lwn[,2] <- rep(B1.teigs,length(ind.out))
+            uwn[,2] <- rep(B2.teigs,length(ind.out))
+          }
+          if (iter > 1)
+          {
+            i.seq <- 0
+            for (gh in ind.out)
+            {
+              i.seq = i.seq + 1
+              
+              lwn[i.seq,1] <- B1.m.final.temp / (m.final.temp[gh] / meigs[gh] )
+              uwn[i.seq,1] <- B2.m.final.temp / (m.final.temp[gh] / meigs[gh] )
+              lwn[i.seq,2] <- B1.t.final.temp - (t.final.temp[gh] - teigs[gh] )
+              uwn[i.seq,2] <- B2.t.final.temp - (t.final.temp[gh] - teigs[gh] )
+            }
+          }
+          
+          i.seq <- 0
+          
+          for (i  in ind.out)
+          {
+            i.seq = i.seq + 1
+            
+            warping_temp <- matrix(-100,2,length(templates))
+            index_temp <- NULL
+            
+            #  CONTROLLO INTERSEZIONI E FISSA I LOWER.WARP.NEW E UPPER.WARP.NEW
+            flag1<-NULL
+            if (only.shift==1 && only.dilation==0)
+            {flag1 <- (uwn[i.seq,2] < B1.teigs) | (lwn[i.seq,2] > B2.teigs)        }
+            if (only.shift==0 && only.dilation==1)
+            {flag1 <- (uwn[i.seq,1] < B1.meigs) | (lwn[i.seq,1] > B2.meigs)        }
+            if (only.shift==only.dilation)
+            {flag1 <- (uwn[i.seq,1] < B1.meigs) | (lwn[i.seq,1] > B2.meigs) | (uwn[i.seq,2] < B1.teigs) | (lwn[i.seq,2] > B2.teigs)        }
+            
+            if (flag1) # se non vi e' intersezione
+            { 
+              flagglobale <- flagglobale+1
+              lower.warp.new <- c( lwn[i.seq,1] - 10^(-4) , lwn[i.seq,2] - 10^(-4) )
+              upper.warp.new <- c( uwn[i.seq,1] + 10^(-4) , uwn[i.seq,2] + 10^(-4) )
+            }
+            
+            if (flag1==FALSE) # se vi e' intersezione
+            {
+              lower.warp.new <- c( ( max(B1.meigs, lwn[i.seq,1]) - 10^(-4) ), (max(B1.teigs, lwn[i.seq,2]) - 10^(-4)) )
+              upper.warp.new <- c( ( min(B2.meigs, uwn[i.seq,1]) + 10^(-4) ), (min(B2.teigs, uwn[i.seq,2]) + 10^(-4)) )
+            }
+            
+            #  FINE CONTROLLO INTERSEZIONI E FISSA I LOWER.WARP.NEW E UPPER.WARP.NEW
+            for(k in 1:length(templates))
+            {
+              init1<-mean(upper.warp.new[1],lower.warp.new[1]); 
+              init2<-mean(upper.warp.new[2],lower.warp.new[2]);
+              
+              if ( (lower.warp.new[1]<=1) && (upper.warp.new[1]>=1)) { init1<-1; }
+              if ( (lower.warp.new[2]<=0) && (upper.warp.new[2]>=0)) { init2<-0; }
+              
+              # Optimization step
+              
+              # shift
+              if (only.shift==1 && only.dilation==0)
+              {
+                if (optim.method=='L-BFGS-B')
+                {
+                  result <- optim(c(init2), best_warping_only.shift, method=optim.method, lower = lower.warp.new[2], upper = upper.warp.new[2])
+                }
+                if (optim.method=='SANN')
+                {
+                  f.sann <- function(x){
+                    #step1 <- runif(1, lower.warp.new[1], upper.warp.new[1])
+                    step2 <- runif(1, lower.warp.new[2], upper.warp.new[2])
+                    x <- c(step2)
+                    return(x)
+                  }
+                  result <- optim(c(init2), best_warping_only.shift, gr=f.sann, method=optim.method)
+                }
+                warping_temp[2,k] <- result$par
+                warping_temp[1,k] <- 1
+              }
+              
+              # dilation
+              if (only.dilation==1 && only.shift==0) 
+              {
+                if (optim.method=='L-BFGS-B')
+                {
+                  result <- optim(c(init1), best_warping_only.dilation, method=optim.method, lower = lower.warp.new[1], upper = upper.warp.new[1])
+                }
+                if (optim.method=='SANN')
+                {
+                  f.sann <- function(x){
+                    step1 <- runif(1, lower.warp.new[1], upper.warp.new[1])
+                    #step2 <- runif(1, lower.warp.new[2], upper.warp.new[2])
+                    x <- c(step1)
+                    return(x)
+                  }
+                  result <- optim(c(init1), best_warping_only.dilation, gr=f.sann, method=optim.method)
+                }
+                warping_temp[1,k] <- result$par
+                warping_temp[2,k] <- 0
+              }
+              
+              # affine
+              if (only.dilation==only.shift) 
+              {
+                if (optim.method=='L-BFGS-B')
+                {
+                  result <- optim(c(init1,init2), best_warping, method=optim.method, lower = lower.warp.new, upper = upper.warp.new)
+                }
+                if (optim.method=='SANN')
+                {
+                  f.sann <- function(x){
+                    step1 <- runif(1, lower.warp.new[1], upper.warp.new[1])
+                    step2 <- runif(1, lower.warp.new[2], upper.warp.new[2])
+                    x <- c(step1, step2)
+                    return(x)
+                  }
+                  result <- optim(c(init1,init2), best_warping, gr=f.sann, method=optim.method)
+                }
+                
+                warping_temp[,k] <- result$par
+              }
+              
+              if(similarity.method == 'd1.pearson' 
+                 || similarity.method == 'd0.pearson'
+              ) 
+              {index_temp <- c(index_temp, -result$value)}
+              
+              if(similarity.method == 'd1.L2' 
+                 || similarity.method == 'd0.L2'
+                 || similarity.method == 'd1.L2.centered'
+                 || similarity.method == 'd0.L2.centered'
+              ) 
+              {index_temp <- c(index_temp, +result$value)} 
+              
+            }
+            
+            if(similarity.method == 'd1.pearson' 
+               || similarity.method == 'd0.pearson'
+            ) 
+            {
+              # similarity index
+              index[i]  <- max(index_temp)
+              # cluster label
+              labels[i] <- which.max(index_temp)
+            }
+            
+            if(similarity.method == 'd1.L2' 
+               || similarity.method == 'd0.L2'
+               || similarity.method == 'd1.L2.centered'
+               || similarity.method == 'd0.L2.centered'
+            ) 
+            {
+              # similarity index
+              index[i]  <- min(index_temp)
+              # cluster label
+              labels[i] <- which.min(index_temp)
+            }
+            
+            # optimal warping function shift and dilation
+            meigs[i] <- warping_temp[1,labels[i]]
+            teigs[i] <- warping_temp[2,labels[i]]
+          }
+          
+          # Normalize shifts and dilations
+          for(k in unique(labels)){
+            
+            data.selec <- which(labels==k)
+            meigs[data.selec] <- meigs[data.selec]/mean(meigs[data.selec])
+            teigs[data.selec] <- (teigs[data.selec] - mean(teigs[data.selec]))/mean(meigs[data.selec])
+            
+          }
+          
+        } # fine for (contatorefor in 1:3) FINE DEL BREAK
+        
+      }# fine if(reg)
+      
+      ########    END FENCE     ###########################
+    }
+    
+    
+    ### apply the selected registration to the whole data set ###
+    ###-------------------------------------------------------###
+    
+    for(i in 1:n.obs){ x.reg[i,] <- meigs[i]*x.reg[i,] + teigs[i] }
+    
+    ### list of shifts and dilations along iterations
+    m.list <- c(m.list,list(meigs))
+    t.list <- c(t.list,list(teigs))
+    m.list.temp <- NULL
+    t.list.temp <- NULL
+    m.list.temp <- m.list
+    t.list.temp <- t.list
+    
+    ### template identification step ###
+    ###------------------------------###
+        
+    # templates common abscissa
+    x.out  <- seq(min(x.reg, na.rm=TRUE),max(x.reg, na.rm=TRUE), length=n.out)
+    
+    # qui templates
+    
+    if (center.method=='k-means')
+    {
+      templates <- NULL
+      
+      for(k in sort(unique(labels))){
+        
+        data.selec <- which(labels==k)
+        y0 <- NULL
+        
+        for(l in 1:r){
+          
+          if (work.with.deriv.kma==1)
+          {temp <- loess(as.numeric(data1[data.selec,,l]) ~ as.numeric(x.reg[data.selec,]), span=span)}
+          if (work.with.deriv.kma==0)
+          {temp <- loess(as.numeric(data0[data.selec,,l]) ~ as.numeric(x.reg[data.selec,]), span=span)}
+
+          temp <- predict(temp, x.out)
+          y0 <- rbind(y0, temp)
+          
+        }
+        
+        templates <- c(templates, list(y0))
+      }
+      
+    }
+    
+    if (center.method=='k-medoids')
+    {
+      # Where all functions are defined 
+      # (the common domaine)
+      x.com  <- seq(max(x.reg[,1], na.rm=T),min(x.reg[,dim(x.reg)[2]], na.rm=T), length=n.out)
+            
+      # Compute registered functions
+      data0.reg<-array(0,dim=c(n.obs,n.out,r+1))
+      data1.reg<-array(0,dim=c(n.obs,n.out,r+1))
+      for(l in 1:r){
+        for(k in 1:n.obs){
+          
+          if(similarity.method == 'd1.L2' 
+             || similarity.method == 'd1.pearson'
+             || similarity.method == 'd1.L2.centered'
+             || similarity.method == 'd1.pearson.mean'
+          ) 
+          {data1.reg[k,,l]<-approx(x.reg[k,],data1[k,,l],xout=x.com)$y}
+          
+          if(similarity.method == 'd0.L2' 
+             || similarity.method == 'd0.pearson'
+             || similarity.method == 'd0.L2.centered'
+             || similarity.method == 'd0.pearson.mean'
+          ) 
+          {data0.reg[k,,l]<-approx(x.reg[k,],data0[k,,l],xout=x.com)$y}
+        }
+      }
+      
+      templates <- NULL
+      
+      for(k in sort(unique(labels))){
+        
+        data.selec <- which(labels==k)
+        y0 <- NULL
+        
+        for(l in 1:r){
+          
+          distanze<-rep(0,length(data.selec))
+          for(i in 1:length(data.selec)){
+            for(j in 1:length(data.selec)){
+              
+              if (work.with.deriv.kma==1)
+              {distanze[i]<-distanze[i]+kma.similarity(
+                x.f = x.com, y1.f = data1.reg[i,,l],
+                x.g = x.com, y1.g = data1.reg[j,,l],
+                similarity.method = similarity.method, unif.grid = FALSE)}
+              
+              if (work.with.deriv.kma==0)
+              {distanze[i]<-distanze[i]+kma.similarity(
+                x.f = x.com, y0.f = data0.reg[i,,l],
+                x.g = x.com, y0.g = data0.reg[j,,l],
+                similarity.method = similarity.method, unif.grid = FALSE)}
+            }
+          }
+          
+          if(similarity.method == 'd1.L2' 
+             || similarity.method == 'd0.L2'
+             || similarity.method == 'd1.L2.centered'
+             || similarity.method == 'd0.L2.centered'
+          ) 
+          {m<-which.min(distanze)}
+          if(similarity.method == 'd1.pearson' 
+             || similarity.method == 'd0.pearson'
+          ) 
+          {m<-which.max(distanze)}         
+          
+          if (work.with.deriv.kma==1)
+          {temp<-approx(x.reg[data.selec[m],],data1[data.selec[m],,l],xout=x.out)$y}
+          if (work.with.deriv.kma==0)
+          {temp<-approx(x.reg[data.selec[m],],data0[data.selec[m],,l],xout=x.out)$y}
+          
+          y0 <- rbind(y0, temp) 
+        }
+        
+        templates <- c(templates, list(y0))
+      }
+    }
+    
+	if (check.total.similarity==TRUE & iter>=2)
+	{
+		 if(similarity.method == 'd1.L2' 
+             || similarity.method == 'd0.L2'
+             || similarity.method == 'd1.L2.centered'
+             || similarity.method == 'd0.L2.centered'
+    	)
+    	{
+    		dist_tot <- sum(index)
+    		dist_tot_old <- sum(index.old)
+    		if (dist_tot_old<=dist_tot) 
+    		{
+    			still.in <- FALSE
+    			index <- index.old
+    			templates <- templates.old
+    			iter <- iter-1
+    		}
+    	}
+    	if(similarity.method == 'd1.pearson' 
+             || similarity.method == 'd0.pearson'
+          ) 
+          {
+          	sim_tot <- sum(index)
+          	sim_tot_old <- sum(index.old)
+          	if (sim_tot_old >= sim_tot )
+          	{
+          		still.in <- FALSE
+          		index <- index.old
+    			templates <- templates.old
+    			iter <- iter-1
+          	}
+          } 
+	}    
+    
+  } # end k-mean alignment cycle
+                       if (iter == iter.max) 
+            warning("reached maximum number of iterations, method stops, consider the possibility of checking the total similarity at each iteration: check.total.similarity=TRUE ")
         m.final <- rep(1, n.obs)
         t.final <- rep(0, n.obs)
         for (i in 1:iter) {
@@ -1371,6 +1421,7 @@ function (x, y0 = NULL, y1 = NULL, n.clust = 1, warping.method = "affine",
             dif <- n.clust - n.clust.final
             warning(dif, " empty cluster(s) founded. \nn.clust: ", 
                 n.clust, "\nn.clust.final: ", n.clust.final)
+            labels <- as.numeric(as.factor(labels))
         }
         if (work.with.deriv.kma == 1) {
             if (center.method == "k-means") {

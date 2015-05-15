@@ -1,9 +1,9 @@
-5ad7c921f1b5bcbe75b08b2a94a18d2c *DESCRIPTION
+2f36a36f25d7408f46e08868343c0e48 *DESCRIPTION
 8b54e5a89fbda3af5e077053d40bec76 *NAMESPACE
-51c88d6d27130455bd68cb428aabc3cc *R/kma.R
+c0b91365808575c69dbdb75445c3a62e *R/kma.R
 4d2eb61789d862776eae18227e02303f *R/kma.compare.R
 0906d401cffe636b212f9e4ae62cfd16 *R/kma.show.results.R
-c1d653a8b58693d99428a051b1f9567b *R/kma.similarity.R
+00bc2f5cfec9d399c4f476ca79cd19a0 *R/kma.similarity.R
 37b739030e194e0f491cd5af53a48669 *data/kma.data.rda
 56501547ce9a8095584188c0b82446d2 *man/fdakma-package.Rd
 6a58dde03fa3ad3c2db5fa6f0e273ec1 *man/kma.Rd

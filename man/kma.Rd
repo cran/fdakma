@@ -6,114 +6,135 @@
 \usage{
 kma(
   x,
-  y,
+  y = NULL,
+  n_clusters = 1L,
   seeds = NULL,
+  seeding_strategy = c("kmeans++", "exhaustive-kmeans++", "exhaustive", "hclust"),
+  warping_class = c("affine", "dilation", "none", "shift", "srsf"),
+  centroid_type = "mean",
+  metric = c("l2", "pearson"),
+  cluster_on_phase = FALSE,
+  use_verbose = TRUE,
   warping_options = c(0.15, 0.15),
-  n_clust = 1,
-  maximum_number_of_iterations = 100,
-  number_of_threads = 1,
-  parallel_method = 0,
+  maximum_number_of_iterations = 100L,
+  number_of_threads = 1L,
+  parallel_method = 0L,
   distance_relative_tolerance = 0.001,
   use_fence = FALSE,
   check_total_dissimilarity = TRUE,
-  use_verbose = TRUE,
   compute_overall_center = FALSE,
-  warping_method = "affine",
-  center_method = "mean",
-  dissimilarity_method = "l2",
-  optimizer_method = "bobyqa"
+  add_silhouettes = TRUE,
+  expand_domain = TRUE
 )
 }
 \arguments{
-\item{x}{A matrix of size nObs x nPts storing the evaluation grid of each
-observation.}
+\item{x}{A numeric vector of length \eqn{M} or a numeric matrix of shape
+\eqn{N \times M} or an object of class \code{\link[funData:funData-class]{funData::funData}}. If a numeric
+vector or matrix, it specifies the grid(s) of size \eqn{M} on which each of
+the \eqn{N} curves have been observed. If an object of class
+\code{\link[funData:funData-class]{funData::funData}}, it contains the whole functional data set and the \code{y}
+argument is not used.}
 
-\item{y}{An 3D array of size nObs x nDim x nPts storing the observation
-values.}
+\item{y}{Either a numeric matrix of shape \eqn{N \times M} or a numeric array
+of shape \eqn{N \times L \times M} or an object of class \code{\link[fda:fd]{fda::fd}}. If a
+numeric matrix or array, it specifies the \eqn{N}-sample of
+\eqn{L}-dimensional curves observed on grids of size \eqn{M}. If an object
+of class \code{\link[fda:fd]{fda::fd}}, it contains all the necessary information about the
+functional data set to be able to evaluate it on user-defined grids.}
 
-\item{seeds}{A vector of integers of size \code{n_clust} specifying the
-indices of the initial templates. Defaults to \code{NULL}, which boils down
-to randomly sampled indices.}
+\item{n_clusters}{An integer value specifying the number of clusters.
+Defaults to \code{1L}.}
+
+\item{seeds}{An integer value or vector specifying the indices of the initial
+centroids. If an integer vector, it is interpreted as the indices of the
+intial centroids and should therefore be of length \code{n_clusters}. If an
+integer value, it is interpreted as the index of the first initial centroid
+and subsequent centroids are chosen according to the k-means++ strategy. It
+can be \code{NULL} in which case the argument \code{seeding_strategy} is used to
+automatically provide suitable indices. Defaults to \code{NULL}.}
+
+\item{seeding_strategy}{A character string specifying the strategy for
+choosing the initial centroids in case the argument \code{seeds} is set to
+\code{NULL}. Choices are
+\href{https://en.wikipedia.org/wiki/K-means\%2B\%2B}{\code{"kmeans++"}},
+\code{"exhaustive-kmeans++"} which performs an exhaustive search over the choice
+of the first centroid, \code{"exhaustive"} which tries on all combinations of
+initial centroids or \code{"hclust"} which first performs hierarchical
+clustering using Ward's linkage criterion to identify initial centroids.
+Defaults to \code{"kmeans++"}, which is the fastest strategy.}
+
+\item{warping_class}{A string specifying the warping class Choices are
+\code{"affine"}, \code{"dilation"}, \code{"none"}, \code{"shift"} or \code{"srsf"}. Defaults to
+\code{"affine"}. The SRSF class is the only class which is boundary-preserving.}
+
+\item{centroid_type}{A string specifying the type of centroid to compute.
+Choices are \code{"mean"}, \code{"medoid"}, \code{"lowess"} or \code{"poly"}. Defaults to
+\code{"mean"}. If LOWESS appproximation is chosen, the user can append an
+integer between 0 and 100 as in \code{"lowess20"}. This number will be used as
+the smoother span. This gives the proportion of points in the plot which
+influence the smooth at each value. Larger values give more smoothness. The
+default value is 10\%. If polynomial approximation is chosen, the user can
+append an positive integer as in \code{"poly3"}. This number will be used as the
+degree of the polynomial model. The default value is \code{4L}.}
+
+\item{metric}{A string specifying the metric used to compare curves. Choices
+are \code{"l2"} or \code{"pearson"}. Defaults to \code{"l2"}. Used only when
+\code{warping_class != "srsf"}. For the boundary-preserving warping class, the
+L2 distance between the SRSFs of the original curves is used.}
+
+\item{cluster_on_phase}{A boolean specifying whether clustering should be
+based on phase variation or amplitude variation. Defaults to \code{FALSE} which
+implies amplitude variation.}
+
+\item{use_verbose}{A boolean specifying whether the algorithm should output
+details of the steps to the console. Defaults to \code{TRUE}.}
 
 \item{warping_options}{A numeric vector supplied as a helper to the chosen
-\code{warping_method} to decide on warping parameter bounds.}
-
-\item{n_clust}{An integer specifying the number of clusters (default: 1).}
+\code{warping_class} to decide on warping parameter bounds. This is used only
+when \code{warping_class != "srsf"}.}
 
 \item{maximum_number_of_iterations}{An integer specifying the maximum number
-of iterations before the algorithm stops (default: 100).}
+of iterations before the algorithm stops if no other convergence criterion
+was met. Defaults to \code{100L}.}
 
-\item{number_of_threads}{An integer specifying the number of threads used for
-parallelization (default: 1).}
+\item{number_of_threads}{An integer value specifying the number of threads
+used for parallelization. Defaults to \code{1L}. This is used only when
+\code{warping_class != "srsf"}.}
 
 \item{parallel_method}{An integer value specifying the type of desired
-parallelization for template computation, If 0 (default), templates are
-computed in parallel. If 1, parallelization occurs within a single template
-computation (only for the medoid method as of now).}
+parallelization for template computation, If \code{0L}, templates are computed
+in parallel. If \code{1L}, parallelization occurs within a single template
+computation (only for the medoid method as of now). Defaults to \code{0L}. This
+is used only when \code{warping_class != "srsf"}.}
 
-\item{distance_relative_tolerance}{A number specifying a relative tolerance
-on the distance update between two iterations. If all observations have not
-sufficiently improved in that sense, the algorithm stops. Defaults to 1e-3.}
+\item{distance_relative_tolerance}{A numeric value specifying a relative
+tolerance on the distance update between two iterations. If all
+observations have not sufficiently improved in that sense, the algorithm
+stops. Defaults to \code{1e-3}. This is used only when \code{warping_class != "srsf"}.}
 
 \item{use_fence}{A boolean specifying whether the fence algorithm should be
-used to robustify the algorithm against outliers (default: \code{FALSE}).}
+used to robustify the algorithm against outliers. Defaults to \code{FALSE}. This
+is used only when \code{warping_class != "srsf"}.}
 
 \item{check_total_dissimilarity}{A boolean specifying whether an additional
 stopping criterion based on improvement of the total dissimilarity should
-be used (default: \code{TRUE}).}
-
-\item{use_verbose}{A boolean specifying whether the algorithm should output
-details of the steps to the console (default: \code{TRUE}).}
+be used. Defaults to \code{TRUE}. This is used only when \code{warping_class != "srsf"}.}
 
 \item{compute_overall_center}{A boolean specifying whether the overall center
-should be also computed (default: \code{FALSE}).}
+should be also computed. Defaults to \code{FALSE}. This is used only when
+\code{warping_class != "srsf"}.}
 
-\item{warping_method}{A string specifying the warping method. Choices are
-\code{"none"}, \code{"shift"}, \code{"dilation"} and \code{"affine"}
-(default).}
+\item{add_silhouettes}{A boolean specifying whether silhouette values should
+be computed for each observation for internal validation of the clustering
+structure. Defaults to \code{TRUE}.}
 
-\item{center_method}{A string specifying the center method. Choices are
-\code{"medoid"} and \code{"mean"} (default).}
-
-\item{dissimilarity_method}{A string specifying the dissimilarity method.
-Choices are \code{"pearson"} and \code{"l2"} (default).}
-
-\item{optimizer_method}{A string specifying the optimizer method. The only
-choice for now is \code{"bobyqa"}.}
+\item{expand_domain}{A boolean specifying how to define the within-cluster
+common grids. When set to \code{FALSE}, the intersection of the individual
+domains is used. When set to \code{TRUE}, the union is used and mean imputation
+is performed to fill in the missing values. Defaults to \code{TRUE}.}
 }
 \value{
-The function output is a \code{kmap} object, which is a list with the
-following elements:
-\item{x}{As input.}
-\item{y}{As input.}
-\item{seeds}{Indices used in the algorithm.}
-\item{iterations}{Number of iterations before the KMA algorithm stops.}
-\item{n_clust}{As input.}
-\item{overall_center_grid}{Overall center grid if
-\code{compute_overall_center} is set.}
-\item{overall_center_values}{Overall center values if
-\code{compute_overall_center} is set.}
-\item{distances_to_overall_center}{Distances of each observation to the
-overall center if \code{compute_overall_center} is set.}
-\item{x_final}{Aligned observation grids.}
-\item{n_clust_final}{Final number of clusters. Note that
-\code{n_clust_final} may differ from initial number of clusters
-\code{n_clust} if some clusters are empty.}
-\item{x_centers_final}{Final center grids.}
-\item{y_centers_final}{Final center values.}
-\item{template_grids}{List of template grids at each iteration.}
-\item{template_values}{List of template values at each iteration.}
-\item{labels}{Cluster memberships.}
-\item{final_dissimilarity}{Distances of each observation to the center of
-its assigned cluster.}
-\item{parameters_list}{List of estimated warping parameters at each
-iteration.}
-\item{parameters}{Final estimated warping parameters.}
-\item{timer}{Execution time step by step.}
-\item{warping_method}{As input.}
-\item{dissimilarity_method}{As input.}
-\item{center_method}{As input.}
-\item{optimizer_method}{As input.}
+An object of class \code{\link[fdacluster]{caps}}.
 }
 \description{
 This is an implementation of the k-means alignment algorithm originally
@@ -121,13 +142,21 @@ described in Sangalli et al. (2010), with improvements as proposed in Vantini
 (2012).
 }
 \examples{
+#----------------------------------
+# Extracts 15 out of the 30 simulated curves in `simulated30_sub` data set
+idx <- c(1:5, 11:15, 21:25)
+x <- fdacluster::simulated30$x[idx, ]
+y <- fdacluster::simulated30$y[idx, , ]
+
+#----------------------------------
+# Runs a k-means clustering with affine alignment, searching for 2 clusters
 res <- kma(
-  fdacluster::simulated30$x,
-  fdacluster::simulated30$y,
-  seeds = c(1, 21),
-  n_clust = 2,
-  center_method = "medoid",
-  warping_method = "affine",
-  dissimilarity_method = "pearson"
+  x,
+  y,
+  n_clusters = 2,
+  seeds = c(1, 11),
+  warping_class = "affine",
+  centroid_type = "medoid",
+  metric = "pearson"
 )
 }

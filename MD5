@@ -1,11 +1,11 @@
-2224e6c119e691ba57e95f0be05f8f47 *DESCRIPTION
-a9079c7e474b593b28bd3014d6f0bfaa *NAMESPACE
-489872c91c2dc6ff7ad2e2194b2de60c *NEWS.md
+14429508aa5d7c150176405c8c046315 *DESCRIPTION
+d9f959a963e0fb4ee259b21ba520acb9 *NAMESPACE
+32884cd53fe806cb80e736fe9abf4a0c *NEWS.md
 df6cc46bc7fae1a55b713f3d5065b35a *R/fdakma-package.R
-fbc9bca1e1c052a8d41059eff0f4898e *R/kma.R
-856f636a793ece5a3e8d19cfa819647c *R/zzz.R
+79f75eee307cd2918b5ff295599c7457 *R/kma.R
+1462bff681e7f2a5236986769bfaf1e3 *R/zzz.R
 60f6caa79cdaf6149f1eb57ffbbab813 *README.md
 30efdbc3d9924f133c9ec4e6d850fbab *man/fdakma-package.Rd
 6b8899232d683c6cd4031cf27affc71a *man/figures/README-unnamed-chunk-3-1.png
 e11eb0b69e9223944e20b485b1a1d95c *man/figures/README-unnamed-chunk-4-1.png
-ef09ea60ff17a84bd4e8e3526c9425a5 *man/kma.Rd
+4879611100ef1bdcac08b8aababcbea8 *man/kma.Rd
